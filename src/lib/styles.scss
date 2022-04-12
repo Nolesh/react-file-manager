@@ -1,0 +1,630 @@
+$menuItemColor: #333;
+$displayItemInitialColor: #3f52b5;
+$displayItemUploadedColor: #5598ff;
+$displayItemErrorColor: #f4645f;
+$dragActiveColor: #303f9f;
+
+@mixin background-image-cloud($fill: 'rgb(90,170,255)') {
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" fill="' + $fill + '" width="500" height="100" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.61 5.64 5.36 8.04 2.35 8.36 0 10.9 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4h2c0-2.76-1.86-5.08-4.4-5.78C8.61 6.88 10.2 6 12 6c3.03 0 5.5 2.47 5.5 5.5v.5H19c1.65 0 3 1.35 3 3s-1.35 3-3 3z"/></svg>');
+    background-position: center;
+    background-size: cover;
+}
+@mixin display-item-error {
+    background: $displayItemErrorColor;
+    border: 1px solid #a55;
+}
+@mixin thumbnail-text {
+    color: white;
+    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+}
+@mixin type {
+    @include thumbnail-text;
+
+    padding-right: 4px;
+    word-break: break-word;
+}
+
+@keyframes react-file-manager_fadeout {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(1.1);
+    }
+}
+
+@keyframes react-file-manager_popup {
+    from {
+        opacity: 0;
+        transform: scale(1.075);
+    }
+
+    25% {
+        opacity: 1;
+        transform: scale(0.95);
+    }
+
+    50% {
+        transform: scale(1.025);
+    }
+
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes react-file-manager_rotate {
+    100% {
+        transform: rotate(1turn);
+    }
+}
+
+@keyframes react-file-manager_fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes react-file-manager_uploadingBackgroundAnim {
+    0% {
+        background-position: 50% 0%;
+    }
+
+    50% {
+        background-position: 50% 100%;
+    }
+
+    100% {
+        background-position: 50% 0%;
+    }
+}
+
+@keyframes react-file-manager_audioBtnStopAnim {
+    0% {
+        color: #fff;
+    }
+
+    50% {
+        color: #f4645f;
+    }
+
+    100% {
+        color: #fff;
+    }
+}
+
+.react-file-manager {
+    .drop-zone {
+        border: 1px solid #bbb;
+        border-radius: 4px;
+        color: #bbb;
+        height: 500px;
+        margin: auto;
+        max-width: 500px;
+        min-width: 270px;
+        outline: none;
+        overflow-x: hidden;
+        overflow-y: auto;
+        position: relative;
+        text-align: center;
+        transition: all 0.15s ease-in-out;
+
+        &:focus {
+            background: #def;
+            border: 1px solid $dragActiveColor;
+        }
+    }
+
+    .drop-zone-container {
+        min-height: calc(100% - 15px);
+        position: relative;
+        width: auto;
+    }
+
+    .drop-zone-disabled {
+        background: #eee;
+
+        &:focus {
+            background: #eee;
+            border: 1px solid #bbb;
+        }
+    }
+
+    .drop-zone-active-accept {
+        background: #acf;
+        border: 1px dashed $dragActiveColor;
+        color: #333;
+    }
+
+    .drop-zone-active-reject {
+        background: #faa;
+        border: 1px solid $displayItemErrorColor;
+        color: $displayItemErrorColor;
+    }
+
+    .drag-drop-layer {
+        background: #fff9;
+        bottom: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+        z-index: 999;
+    }
+
+    .drag-drop-title {
+        color: #777;
+        font-size: 20px;
+        font-weight: bold;
+        padding: 0 30px;
+        pointer-events: none;
+        position: sticky;
+        top: 50%;
+        transform: translateY(-50%);
+        user-select: none;
+        white-space: pre-line;
+    }
+
+    .drag-drop-text {
+        font-size: 20px;
+        font-weight: bold;
+        left: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        user-select: none;
+        white-space: pre-line;
+        width: 90%;
+    }
+
+    .drop-zone-header {
+        align-content: stretch;
+        align-items: center;
+        background: linear-gradient(#ccc, #eee);
+        box-shadow: 0 0 3px 1px #777;
+        color: #333;
+        display: grid;
+        font-family: Consolas, 'Times New Roman', Times, serif;
+        font-size: 16px;
+        gap: 0 4px;
+        grid-auto-flow: row;
+        grid-template-areas: '. . . .';
+        grid-template-columns: 64px minmax(75px, 1fr) minmax(50px, 100px) 42px;
+        grid-template-rows: auto;
+        height: 20px;
+        justify-content: center;
+        margin-bottom: 7px;
+        padding: 0 10px;
+        position: sticky;
+        top: 0;
+        user-select: none;
+        z-index: 1;
+
+        > div {
+            border-left: 1px solid #888;
+            border-right: 1px solid #888;
+            cursor: pointer;
+            display: flex;
+            height: 100%;
+            justify-content: center;
+            position: relative;
+            transition: color 0.15s;
+
+            &:hover {
+                color: #5597ff;
+            }
+        }
+
+        > div:nth-child(1) {
+            border-left: none;
+        }
+
+        > div:nth-child(4) {
+            border-right: none;
+        }
+    }
+
+    .drop-zone-footer {
+        background: #ccc7;
+        bottom: 0;
+        color: transparent;
+        cursor: pointer;
+        font-size: 12px;
+        height: 15px;
+        line-height: 16px;
+        position: sticky;
+        transition: all 0.15s;
+        user-select: none;
+        width: 100%;
+
+        &:hover {
+            background: #cccc;
+            color: #333;
+        }
+    }
+
+    .loading-icon {
+        animation: react-file-manager_rotate 1s linear infinite;
+        fill: #777;
+        height: 48px;
+        width: 48px;
+    }
+
+    .menu {
+        background: #eee;
+        border: solid 1px #eee;
+        box-shadow: 0 0 12px #aaa;
+        min-height: 25px;
+        min-width: 100px;
+        position: fixed !important;
+        z-index: 999999;
+    }
+
+    .menu-visible {
+        animation: 0.5s 1 react-file-manager_popup;
+    }
+
+    .menu-hidden {
+        animation: 0.3s 1 forwards react-file-manager_fadeout;
+    }
+
+    .menu-layer {
+        background: #fff7;
+        height: 100% !important;
+        left: 0 !important;
+        opacity: 0;
+        position: fixed !important;
+        top: 0 !important;
+        transition: all 0.3s ease-in-out;
+        visibility: hidden;
+        width: 100% !important;
+        z-index: 99999;
+    }
+
+    .menu-layer-visible {
+        opacity: 1;
+        visibility: visible !important;
+    }
+
+    .menu-item {
+        background: white;
+        border: solid 1px #eee;
+        color: $menuItemColor;
+        cursor: pointer;
+        display: grid;
+        font-size: 17px;
+        grid-template-areas: '. .';
+        grid-template-columns: 35px 1fr;
+        grid-template-rows: 1fr;
+        margin: 1px;
+        padding: 5px;
+        transition: all 0.1s ease-in-out;
+
+        &:focus {
+            background: $displayItemUploadedColor;
+            color: white;
+            fill: white;
+            outline: none;
+        }
+
+        &:hover {
+            background: #ddd;
+        }
+
+        &:hover:focus {
+            background: #7ae;
+        }
+    }
+
+    .menu-item-icon {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .menu-item-name {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin-top: 2px;
+        padding: 0 10px;
+    }
+
+    .menu-item-name-join {
+        grid-column: 1 / 3;
+        padding: 0 10px;
+    }
+
+    .icon-button {
+        border: 1px solid #aaa;
+        border-radius: 3px;
+        box-shadow: 1px 1px 3px 0 #555;
+        height: 34px;
+        outline: none;
+        transition: all 0.2s ease-in-out;
+        width: 40px;
+
+        &:focus {
+            outline: auto $displayItemInitialColor;
+        }
+
+        &:hover {
+            background: #fff;
+        }
+
+        &:disabled {
+            background: inherit;
+            box-shadow: none;
+            fill: gray;
+        }
+
+        .svg-icon {
+            margin-top: 2px;
+        }
+    }
+
+    .icon-button-pos {
+        @extend .icon-button;
+
+        height: 28px;
+        margin: 1px;
+
+        .svg-icon {
+            fill: yellowgreen;
+            margin-top: -1px;
+        }
+    }
+
+    .icon-button-neg {
+        @extend .icon-button-pos;
+
+        .svg-icon {
+            fill: $displayItemErrorColor;
+        }
+    }
+
+    .svg-icon {
+        height: 24px;
+        width: 24px;
+    }
+
+    .display-item {
+        animation: 0.5s 1 normal react-file-manager_popup;
+        background: $displayItemInitialColor;
+        border-radius: 4px;
+        box-shadow: 1px 1px 3px 0 #777;
+        color: white;
+        margin: 5px 4px;
+        min-height: 74px;
+        position: relative;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .display-item-initial {
+        border: 1px solid #333;
+    }
+
+    .display-item-uploading {
+        animation: react-file-manager_uploadingBackgroundAnim 2.5s ease infinite;
+        background: linear-gradient(180deg, $displayItemInitialColor, $displayItemUploadedColor);
+        background-size: 100% 250%;
+    }
+
+    .display-item-uploaded {
+
+        @include background-image-cloud;
+
+        background: $displayItemUploadedColor;
+        border: 1px solid #777;
+    }
+
+    .display-item-upload-error {
+        @include display-item-error;
+    }
+
+    .display-item-del-error {
+        @include display-item-error;
+        @include background-image-cloud('rgb(250,120,120)');
+    }
+
+    .display-item-edit-mode {
+        @include background-image-cloud('rgb(70,100,200)');
+
+        background: $displayItemInitialColor;
+        border: 1px solid #777;
+    }
+
+    .display-item-disabled {
+
+        @include background-image-cloud('rgb(210,210,210)');
+
+        background: #ddd;
+        border: 1px solid #aaa;
+        color: rgba(0, 0, 0, 0.4);
+    }
+
+    .read-only-label {
+        bottom: 6px;
+        cursor: default;
+        height: 15px;
+        left: 57px;
+        position: absolute;
+        width: 15px;
+        z-index: 1;
+
+        > * {
+            fill: #ffc200;
+            transform: scale(0.65);
+        }
+    }
+
+    .progress {
+        background: #afffaf;
+        border-radius: 4px;
+        height: 3px;
+        left: 0;
+        margin: 1px 3px;
+        position: absolute;
+        transition: width 0.5s ease-in-out;
+        width: 0%;
+    }
+
+    .grid {
+        align-content: stretch;
+        align-items: center;
+        display: grid;
+        gap: 0 4px;
+        grid-auto-flow: row;
+        grid-template-areas: '. . . .';
+        grid-template-columns: 64px minmax(75px, 1fr) minmax(50px, 100px) 42px;
+        grid-template-rows: auto;
+        height: 64px;
+        justify-content: center;
+        padding: 5px;
+
+        > * {
+            align-items: center;
+            display: grid;
+            justify-content: center;
+            position: relative;
+        }
+
+        > *:nth-child(2) {
+            -webkit-box-orient: vertical;
+            display: block;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
+            text-align: left;
+        }
+    }
+
+    .type-wrapper {
+        border: 1px solid #fff;
+        border-radius: 4px;
+        height: 62px;
+        width: 62px;
+
+        img {
+            border-radius: 2px;
+            max-height: 60px;
+            max-width: 60px;
+            width: 100%;
+        }
+
+        > div {
+            display: flex;
+            justify-content: center;
+        }
+    }
+
+    .type-img {
+        @include type;
+
+        font-size: 11px;
+        left: 3px;
+        position: absolute;
+        top: 1px;
+    }
+
+    .type {
+        @include type;
+
+        font-size: 13px;
+        padding-left: 3px;
+    }
+
+    .duration {
+        @include thumbnail-text;
+
+        bottom: 3px;
+        font-size: 12px;
+        height: 12px;
+        left: 50%;
+        position: absolute;
+        transform: translateX(-50%);
+    }
+
+    .type-audio {
+        background: #fff5;
+        border-radius: 50%;
+        cursor: pointer;
+        height: 32px;
+        margin-top: 14px;
+        position: relative;
+        width: 32px;
+    }
+
+    .type-audio-btn {
+        color: #fff;
+        cursor: inherit;
+        font-family: monospace;
+        font-size: 21px;
+        left: 11.5px;
+        position: absolute;
+        top: 2.5px;
+    }
+
+    .type-audio-btn-stop {
+        animation: react-file-manager_audioBtnStopAnim 1.5s ease infinite;
+        font-size: 17px;
+        left: 9px;
+        top: 5.75px;
+    }
+
+    .type-audio-duration {
+        @include thumbnail-text;
+
+        font-size: 12px;
+        margin-top: 1px;
+    }
+
+    .text-field {
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid #9cf;
+        color: white;
+        font: 16px 'Times New Roman';
+        transition: all 0.3s ease-in-out;
+        width: inherit;
+
+        &:focus-visible {
+            border-bottom: 2px solid white;
+            outline: none;
+        }
+    }
+
+    .image-lazy-loader {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 30px;
+        min-width: 5px;
+    }
+
+    .image-lazy-loader .none {
+        display: none;
+    }
+
+    .image-lazy-loader .visible {
+        animation: react-file-manager_fadeIn 0.5s ease-in-out;
+        display: flex;
+    }
+
+    .image-loading-icon {
+        animation: react-file-manager_rotate 1s linear infinite;
+        fill: #777;
+        height: 36px;
+        width: 36px;
+    }
+
+    .fade-in-anim {
+        animation: react-file-manager_fadeIn 0.5s ease-in-out;
+    }
+}

@@ -1,0 +1,6 @@
+src/
+tests/
+webpack.config/
+tsconfig.json
+.babelrc
+!dist/

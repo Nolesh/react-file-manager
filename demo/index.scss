@@ -1,0 +1,93 @@
+.app {
+    nav {
+        background: #eee;
+        border: 1px solid #aaa;
+        border-radius: 4px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin: 10px 20px;
+        padding: 10px;
+
+        div {
+            margin: 5px 10px;
+
+            a {
+                color: #333;
+                font-size: 15px;
+                font-weight: bold;
+                text-decoration: none;
+
+                &:hover {
+                    color: #59f;
+                }
+            }
+        }
+    }
+
+    .active {
+        color: #59f;
+        text-decoration: underline;
+    }
+
+    .paper {
+        margin: 20px;
+        min-height: 700px;
+        padding: 20px;
+    }
+
+    .checkbox-wrapper {
+        border: 1px solid #999;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        margin: 20px auto;
+        max-width: 480px;
+        padding: 10px;
+        text-align: left;
+    }
+
+    .loading {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        font-size: 21px;
+        font-weight: bold;
+        height: 100%;
+        justify-content: center;
+    }
+
+    .progressBar {
+        height: 5px;
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+    }
+
+    .progress-bar-wrapper {
+        height: 10px;
+        margin: auto;
+        margin-top: 10px;
+        max-width: 500px;
+        text-align: center;
+    }
+
+    .progress-bar {
+        background: #5598ff;
+        display: none;
+        height: 10px;
+        transition: width 0.3s ease;
+        width: 100%;
+    }
+
+    .button-container {
+        align-content: center;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-evenly;
+        margin: auto;
+        max-width: 500px;
+    }
+}

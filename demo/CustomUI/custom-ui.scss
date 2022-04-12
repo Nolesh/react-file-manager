@@ -1,0 +1,148 @@
+$dragActiveColor: #acf;
+$errorColor: #f4645f;
+
+@mixin centered-child {
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes uploadingBgAnim {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+// It is possible to override the CSS classes of certain elements that are not exposed for outside customization
+.react-file-manager {
+    .root-layer {
+        background: #ccc7;
+        bottom: 0;
+        pointer-events: none;
+        position: absolute;
+        top: 0;
+        width: 100%;
+        z-index: 999;
+    }
+
+    .root-title {
+        color: #007;
+        font-size: 20px;
+        font-weight: bold;
+        pointer-events: none;
+        position: sticky;
+        top: 50%;
+        transform: translateY(-50%);
+        user-select: none;
+    }
+}
+
+.drop-zone-custom {
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    // overflow: visible;
+    color: #ccc;
+    height: 440px;
+    margin: auto;
+    max-width: 500px;
+    min-width: 270px;
+    outline: none;
+    overflow-x: hidden;
+    // height: auto;
+    overflow-y: auto;
+    position: relative;
+    // minHeight: 100px;
+    text-align: center;
+
+    &:focus {
+        border: 2px dotted #ccc;
+    }
+}
+
+.drop-zone-custom-container {
+    min-height: calc(100% - 16px);
+    min-width: 385px;
+    position: relative;
+    width: auto;
+}
+
+.drop-zone-centered-child {
+    @include centered-child;
+}
+
+.drop-zone-active-accept-custom {
+    background: #def;
+    border: 2px dashed $dragActiveColor;
+    color: #007;
+}
+
+.drop-zone-active-reject-custom {
+    background: $errorColor;
+    border: 2px dashed $errorColor;
+    color: #700;
+}
+
+.drop-zone-header-custom {
+    background: #3f52b5;
+    border-bottom: 1px solid #333;
+    box-shadow: 0 0 3px 1px #333;
+    color: white;
+    padding: 0 4px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+
+    > div {
+        cursor: pointer;
+
+        &:hover {
+            color: rgb(253 105 105);
+        }
+    }
+
+    > div:nth-child(4) {
+        cursor: default;
+
+        &:hover {
+            color: white;
+        }
+    }
+}
+
+.drop-zone-footer-custom {
+    background: #3f52b5;
+    border-top: 1px solid #333;
+    bottom: 0;
+    box-shadow: 0 0 3px 1px #333;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    height: 15px;
+    line-height: 16px;
+    position: sticky;
+    user-select: none;
+    width: 100%;
+
+    &:hover {
+        color: rgb(253 105 105);
+    }
+}

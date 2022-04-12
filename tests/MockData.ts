@@ -1,0 +1,222 @@
+// https://www.freecodecamp.org/news/testing-react-hooks/
+// https://blog.cloudboost.io/how-to-mock-es6-modules-and-globals-with-jest-814de9b24c6d
+
+export const soundBeep =
+    'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU' +
+    Array(1e3).join('123');
+
+export const imgRedDot =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
+
+// https://medium.com/swlh/how-to-mock-a-fetch-api-request-with-jest-and-typescript-bb6adf673a00
+export function getGlobalObject<T>(): T {
+    return (
+        isNodeEnv()
+            ? global
+            : typeof window !== 'undefined'
+            ? window
+            : typeof self !== 'undefined'
+            ? self
+            : {}
+    ) as T;
+}
+
+function isNodeEnv(): boolean {
+    return (
+        Object.prototype.toString.call(typeof process !== 'undefined' ? process : 0) ===
+        '[object process]'
+    );
+}
+
+// ----------------------------------------------------------------------------
+
+export const mockCreateObjectURL = (returnedValue: string) => {
+    const createObjectURL = (global.URL.createObjectURL = jest.fn(() => returnedValue));
+    return {
+        createObjectURL,
+        mockRestore: () => createObjectURL.mockRestore(),
+    };
+};
+
+export const mockAudio = () => {
+    class MockedAudio {
+        src: string = null;
+        duration: number = null;
+        onloadedmetadata: () => void;
+        onerror: (e: Error) => void;
+
+        static init: (obj: MockedAudio) => void;
+        static instances: MockedAudio[] = [];
+        constructor() {
+            if (MockedAudio.init) MockedAudio.init(this);
+            MockedAudio.instances.push(this);
+        }
+
+        static mockRestore() {
+            global.Audio = initialValue;
+            MockedAudio.init = null;
+            MockedAudio.instances = [];
+        }
+    }
+
+    const initialValue = global.Audio;
+    return ((global.Audio as unknown) = MockedAudio);
+
+    // return mockedAudio;
+};
+
+// -----------------------------------------------------------------------------
+
+export const localStorageImpl = {
+    register: () => {
+        let storage = (window as any).customLocalStorage;
+
+        if (storage) {
+            return {
+                storage,
+                methods: (window as any).customLocalStorageMethods,
+            };
+        }
+
+        storage = (window as any).customLocalStorage = {} as any;
+
+        const setItem = jest.spyOn(Storage.prototype, 'setItem');
+        setItem.mockImplementation((key, value) => {
+            storage[key] = value;
+        });
+
+        const getItem = jest.spyOn(Storage.prototype, 'getItem');
+        getItem.mockImplementation((key) => {
+            return storage[key];
+        });
+
+        const removeItem = jest.spyOn(Storage.prototype, 'removeItem');
+        removeItem.mockImplementation((key) => {
+            delete storage[key];
+        });
+
+        const methods = ((window as any).customLocalStorageMethods = {
+            setItem,
+            getItem,
+            removeItem,
+        });
+
+        return {
+            storage,
+            methods,
+        };
+    },
+    unregister: () => {
+        const methods = (window as any).customLocalStorageMethods;
+        if (methods) {
+            const { setItem, getItem } = methods as {
+                setItem: jest.SpyInstance<void, [key: string, value: string]>;
+                getItem: jest.SpyInstance<string, [key: string]>;
+            };
+            setItem.mockReset();
+            getItem.mockReset();
+        }
+        delete (window as any).customLocalStorageMethods;
+        delete (window as any).customLocalStorage;
+    },
+};
+
+// -----------------------------------------------------------------------------
+// https://stackoverflow.com/questions/64587566/how-to-test-react-dropzone-with-jest-and-react-testing-library
+export const wrapFilesToDataTransfer = (files: Array<File>) => ({
+    dataTransfer: {
+        files,
+        items:
+            files &&
+            files.map((file) => ({
+                kind: 'file',
+                type: file.type,
+                getAsFile: () => file,
+            })),
+        types: ['Files'],
+    },
+});
+
+export const createEventWithFiles = (files: File[], eventType: string = null) => {
+    const data = wrapFilesToDataTransfer(files);
+    const event = new Event(eventType, { bubbles: true });
+    return Object.assign(event, data);
+};
+
+// -----------------------------------------------------------------------------
+export const createFile = (data: string, name?: string, mimeType?: string) => {
+    name = name || 'mock.txt';
+    mimeType = mimeType || 'plain/txt';
+
+    return new File([data], name, { type: mimeType });
+};
+
+// export const createFile = <T>(name: string, data: T, options?: FilePropertyBag) => {
+//     const json = JSON.stringify(data);
+//     const file = new File([json], name, options);
+//     return file;
+// }
+
+// https://gist.github.com/josephhanson/372b44f93472f9c5a2d025d40e7bb4cc
+export const mockFile = (name?: string, size?: number, mimeType?: string) => {
+    name = name || 'mock.txt';
+    size = size || 1024;
+    mimeType = mimeType || 'plain/txt';
+
+    // function range(count: number) {
+    //     let output = "";
+    //     for (let i = 0; i < count; i++) {
+    //         output += "a";
+    //     }
+    //     return output;
+    // }
+    // const data = range(size);
+
+    const data = new Array(size + 1).join('a');
+
+    const blob = new Blob([data], { type: mimeType });
+    (blob as any).lastModifiedDate = new Date();
+    (blob as any).name = name;
+
+    return blob as File;
+};
+// -----------------------------------------------------------------------------
+
+export const useCustomTimer = () => {
+    let time = 0;
+    let timers: { callback: () => void; ms: number }[] = [];
+
+    const setCustomTimer = (callback: () => void, ms = 0) => {
+        if (ms <= time) {
+            callback();
+            return;
+        }
+        timers.push({ callback, ms });
+        timers.sort((a, b) => a.ms - b.ms);
+    };
+
+    const advanceTimersByTime = (ms: number) => {
+        time += ms;
+        timers = timers.reduce((acc, val) => {
+            if (val.ms <= time) {
+                val.callback();
+            } else acc.push(val);
+            return acc;
+        }, []);
+    };
+
+    const advanceTimersToNextTimer = () => {
+        if (timers.length) advanceTimersByTime(timers[0].ms - time);
+    };
+
+    return {
+        setCustomTimer,
+        advanceTimersByTime,
+        advanceTimersToNextTimer,
+    };
+};
+
+// module.exports = {
+//     localStorageImpl,
+//     mockFile
+// }

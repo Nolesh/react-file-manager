@@ -1,0 +1,283 @@
+$dragActiveColor: #acf;
+$errorColor: #f4645f;
+
+@mixin centered-child {
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.progress-bar {
+    background: yellowgreen;
+    display: none;
+    height: 10px;
+    margin-top: -10px;
+    transition: width 0.3s ease;
+    width: 100%;
+}
+
+.paper {
+    margin: auto;
+    max-width: 600px;
+    padding: 20px;
+    text-align: center;
+}
+
+.drop-zone-custom {
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    color: #ccc;
+    height: 450px;
+    margin: auto;
+    max-width: 500px;
+    min-width: 270px;
+    outline: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+    text-align: center;
+
+    &:focus {
+        border: 2px dotted #ccc;
+    }
+}
+
+.drop-zone-custom-container {
+    min-height: calc(100% - 15px);
+    position: relative;
+    width: auto;
+}
+
+.drop-zone-custom-add {
+    background: yellow;
+}
+
+.drop-zone-centered-child {
+    @include centered-child;
+}
+
+.drop-zone-active-accept-custom {
+    background: #def;
+    border: 2px dashed $dragActiveColor;
+    color: #007;
+}
+
+.drop-zone-active-reject-custom {
+    background: $errorColor;
+    border: 2px dashed $errorColor;
+    color: #700;
+}
+
+.drop-zone-header-custom {
+    align-content: stretch;
+    align-items: center;
+    background: linear-gradient(#70afff, #458bff);
+    box-shadow: 0 0 3px 1px #777;
+    color: white;
+    display: grid;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 16px;
+    gap: 0 4px;
+    grid-auto-flow: row;
+    grid-template-areas: '. . . .';
+    grid-template-columns: 64px minmax(75px, 1fr) minmax(50px, 100px) 42px;
+    grid-template-rows: auto;
+    height: 20px;
+    justify-content: center;
+    margin-bottom: 7px;
+    padding: 0 10px;
+    position: sticky;
+    top: 0;
+    user-select: none;
+    z-index: 1;
+
+    > div {
+        border-left: 1px solid #ddd;
+        border-right: 1px solid #ddd;
+        cursor: pointer;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+        position: relative;
+
+        &:hover {
+            color: #56ff00;
+        }
+    }
+
+    > div:nth-child(4) {
+        cursor: default;
+
+        &:hover {
+            color: white;
+        }
+    }
+}
+
+.drop-zone-footer-custom {
+    background: linear-gradient(#70afff, #458bff);
+    bottom: 0;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    height: 15px;
+    line-height: 16px;
+    position: sticky;
+    user-select: none;
+    width: 100%;
+
+    &:hover {
+        color: #56ff00;
+    }
+}
+
+.root-layer {
+    background: #ccc7;
+    bottom: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 999;
+}
+
+.root-title {
+    color: #007;
+    font-size: 20px;
+    font-weight: bold;
+    pointer-events: none;
+    position: sticky;
+    top: 50%;
+    transform: translateY(-50%);
+    user-select: none;
+}
+
+.menu-item-custom {
+    background: white;
+    color: #555;
+    font-size: 17px;
+    margin: 1px;
+    padding: 5px;
+    transition: all 0.15s ease-in-out;
+
+    > div:nth-child(1) {
+        fill: #555;
+        text-align: center;
+    }
+
+    > div:nth-child(2) {
+        cursor: default;
+        text-align: center;
+    }
+
+    &:hover {
+        background: #cef;
+        color: #5af;
+
+        > div:nth-child(1) {
+            fill: #5af;
+        }
+    }
+
+    &:focus {
+        background: #fec;
+        outline: 2px solid black;
+    }
+}
+
+@keyframes uploadingBgAnim {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.display-item-custom {
+    border: 1px solid black;
+    color: black;
+    margin: 3px;
+    position: relative;
+}
+
+.display-item-initial-custom {
+    background: linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%);
+}
+
+.display-item-uploading-custom {
+    animation: uploadingBgAnim 2s ease infinite;
+    background: linear-gradient(270deg, #f02d00, #3355f0);
+    background-size: 300% 300%;
+}
+
+.display-item-uploaded-custom {
+    background: linear-gradient(0deg, rgb(46 133 251 / 1) 0%, rgb(0 212 255 / 1) 100%);
+}
+
+.display-item-edit-mode-custom {
+    background: linear-gradient(0deg, rgb(226 216 0) 0%, rgb(255 247 148) 100%);
+}
+
+.display-item-error-custom {
+    background: linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%);
+}
+
+.display-item-disabled-custom {
+    background: #dde;
+    color: #999;
+}
+
+.video-meta {
+    background: #0009;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+}
+
+.video-meta-header {
+    font-size: 10px;
+    top: 0;
+}
+
+.video-meta-footer {
+    bottom: 0;
+    font-size: 11px;
+}
+
+.loader {
+    align-items: center;
+    border: 9px solid white;
+    border-radius: 50%;
+    display: flex;
+    height: 15px;
+    justify-content: center;
+    width: 15px;
+}
+
+.loader::after {
+    animation: rotate 1.3s linear infinite;
+    border: 6px solid transparent;
+    border-radius: 50%;
+    border-top: 6px solid white;
+    content: '';
+    height: 40px;
+    position: absolute;
+    width: 40px;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}

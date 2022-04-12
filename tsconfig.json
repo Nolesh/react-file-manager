@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "module": "es2020",
+        "target": "es5",
+        "lib": ["esnext", "dom"],
+        "jsx": "react",
+        "allowJs": true,
+        "checkJs": false,
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "declaration": true,
+        "declarationMap": false,
+        "removeComments": false,
+        "allowSyntheticDefaultImports": true,
+        "suppressExcessPropertyErrors": true,
+        "strictBindCallApply": true,
+        "strictNullChecks": false,
+        "esModuleInterop": true,
+        "typeRoots": ["node_modules/@types"]
+    },
+    "include": ["src/**/*", "tests/**/*", "demo/**/*"],
+    "exclude": ["node_modules"]
+}
