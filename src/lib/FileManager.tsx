@@ -1681,7 +1681,7 @@ FileManager.propTypes = {
         }),
         FileItem: PropTypes.exact({
             titles: PropTypes.objectOf(PropTypes.string),
-            root: PropTypes.objectOf(
+            rootStyles: PropTypes.objectOf(
                 PropTypes.exact({
                     className: PropTypes.string,
                     style: PropTypes.object,
