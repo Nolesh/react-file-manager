@@ -498,7 +498,8 @@ $dragActiveColor: #303f9f;
 
         > *:nth-child(2) {
             -webkit-box-orient: vertical;
-            display: block;
+            /* stylelint-disable-line */
+            display: -webkit-box;
             -webkit-line-clamp: 3;
             overflow: hidden;
             text-align: left;
