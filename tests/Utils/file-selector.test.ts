@@ -1,6 +1,6 @@
 import { DragEvent } from 'react';
 
-import { createEventWithFiles, mockFile, createFile } from '../MockData';
+import { createEventWithFiles, mockFile as createFile } from '../MockData';
 import { getDataTransferFiles } from '../../src/lib/Utils/file-selector';
 
 type FileOrDirEntry = FileEntry | DirEntry;
@@ -125,7 +125,7 @@ describe('file-selector', () => {
     });
 
     test('should return the evt {target} {files} if the passed event is an input evt', async () => {
-        const mockFile = createFile('content');
+        const mockFile = createFile();
         const evt = createEventWithFiles([mockFile]);
 
         const files = await getDataTransferFiles(evt as unknown as DragEvent);
@@ -141,7 +141,7 @@ describe('file-selector', () => {
     });
 
     test('should return {files} from DataTransfer if {items} is not defined (e.g. IE11)', async () => {
-        const mockFile = createFile('content');
+        const mockFile = createFile();
         const evt = createEventWithFiles([mockFile]);
         delete evt.dataTransfer.items;
 
@@ -157,7 +157,7 @@ describe('file-selector', () => {
     });
 
     test('skips DataTransfer {items} that are of kind "string"', async () => {
-        const mockFile = createFile('content');
+        const mockFile = createFile();
         const evt = createEventWithFiles([mockFile]);
         evt.dataTransfer.items.push(dataTransferItemFromStr('test'));
 
@@ -179,15 +179,15 @@ describe('file-selector', () => {
 
     test('can read a tree of directories recursively and return a flat list of FileWithPath objects', async () => {
         const mockFiles = [
-            createFile('a', 'a.json'),
-            createFile('b', 'b.json'),
-            createFile('c', 'c.json'),
-            createFile('d', 'd.json'),
-            createFile('e', 'e.json'),
+            createFile('a.json'),
+            createFile('b.json'),
+            createFile('c.json'),
+            createFile('d.json'),
+            createFile('e.json'),
         ];
 
         const [f1, f2, f3, f4, f5] = mockFiles;
-        const [f6, f7] = [createFile('f', '.DS_Store'), createFile('g', 'Thumbs.db')];
+        const [f6, f7] = [createFile('.DS_Store'), createFile('Thumbs.db')];
         const evt = dragEvtFromItems([
             dataTransferItemFromEntry(fileSystemFileEntryFromFile(f1), f1),
             dataTransferItemFromEntry(fileSystemFileEntryFromFile(f2), f2),
@@ -213,7 +213,7 @@ describe('file-selector', () => {
     });
 
     test('should throw if reading dir entries fails', async () => {
-        const mockFiles = [createFile('a', 'a.json'), createFile('b', 'b.json')];
+        const mockFiles = [createFile('a.json'), createFile('b.json')];
         const [f1, f2] = mockFiles;
         const evt = dragEvtFromItems([
             dataTransferItemFromEntry(
@@ -235,7 +235,7 @@ describe('file-selector', () => {
     });
 
     test('should throw if reading file entry fails', async () => {
-        const mockFiles = [createFile('a', 'a.json'), createFile('b', 'b.json')];
+        const mockFiles = [createFile('a.json'), createFile('b.json')];
         const [f1, f2] = mockFiles;
         const evt = dragEvtFromItems([
             dataTransferItemFromEntry(

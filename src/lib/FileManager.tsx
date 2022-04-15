@@ -87,7 +87,7 @@ export type TGetUploadParams = (localFileData: ILocalFileData | ILocalFileData[]
 
 export interface IFileManagerRef {
     openFileDialog: () => void;
-    addLocalFiles: (files: File | File[]) => void;
+    addLocalFiles: (files: FileList | File | File[]) => void;
     removeAllLocalFiles: () => void;
     update: () => void;
     upload: () => Promise<any>;
@@ -1285,8 +1285,7 @@ const FileManager = forwardRef(
 
         const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             e.preventDefault();
-            const fileArray = Array.from((e.target as HTMLInputElement).files);
-            addLocalFiles(fileArray);
+            addLocalFiles(e.target.files);
         };
 
         const onDropFile = (e: React.DragEvent<HTMLInputElement>) => {
@@ -1296,7 +1295,7 @@ const FileManager = forwardRef(
             getDataTransferFiles(e).then((files) => addLocalFiles(files));
         };
 
-        const addLocalFiles = (files: File | File[]) => {
+        const addLocalFiles = (files: FileList | File | File[]) => {
             setDragData({
                 active: false,
                 reject: false,
@@ -1309,10 +1308,12 @@ const FileManager = forwardRef(
             const acceptedFiles: File[] = [];
             const fileRejections: { file: File; errors: TInternalError[] }[] = [];
 
+            if (files instanceof FileList) files = Array.from(files);
             if (!Array.isArray(files)) files = [files];
             for (const file of files) {
                 // assuming it's a folder
                 if (file.type === '' && file.size === 0) continue;
+                if (!(file instanceof File)) continue;
 
                 let hasError = false;
                 const errors: TInternalError[] = [];

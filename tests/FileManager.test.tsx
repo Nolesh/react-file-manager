@@ -15,10 +15,10 @@ import {
     localStorageImpl,
     createEventWithFiles,
     mockFile,
-    createFile,
     mockAudio,
     mockCreateObjectURL,
     useCustomTimer,
+    mockFileList,
 } from './MockData';
 import { SameType } from '../src/lib/Utils/types';
 import * as utils from '../src/lib/Utils';
@@ -2890,7 +2890,7 @@ describe('FileManager exposed functions & props', () => {
             expect(input.click).toBeCalledTimes(expectedClickCount);
         };
 
-        const { rerender, getByRole, getByTestId, findByTestId, findByText } = render(<Manager />);
+        const { rerender, getByRole, findByText } = render(<Manager />);
 
         await findByText('dragNdrop');
 
@@ -2909,10 +2909,11 @@ describe('FileManager exposed functions & props', () => {
         (input.click as jest.Mock).mockRestore();
     });
 
-    test('should test addLocalFiles', async () => {
+    test('should test addLocalFiles (add single file)', async () => {
         mockFetch(true, 200, []);
 
-        const { rerender, getByTitle, getByTestId, queryAllByRole, findByText } = render(
+
+        const { getByTitle, queryAllByRole, findByText } = render(
             <Manager />
         );
 
@@ -2925,6 +2926,51 @@ describe('FileManager exposed functions & props', () => {
         await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(1));
         expect(getByTitle('1.txt')).toBeInTheDocument();
     });
+
+
+    test('should test addLocalFiles (add FileList)', async () => {
+        mockFetch(true, 200, []);
+
+        const { create, restore } = mockFileList();
+
+        const { getByTitle, queryAllByRole, findByText } = render(
+            <Manager />
+        );
+
+        await findByText('dragNdrop');
+
+        const fileList = create(mockFile('1.txt'), mockFile('2.txt'))
+
+        act(() => {
+            managerRef.current.addLocalFiles(fileList);
+        });
+
+        await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(2));
+        expect(getByTitle('1.txt')).toBeInTheDocument();
+        expect(getByTitle('2.txt')).toBeInTheDocument();
+
+        restore();
+    });
+
+
+    test('addLocalFiles should ignore adding an object that is not a file', async () => {
+        mockFetch(true, 200, []);
+
+        const { queryAllByRole, findByText } = render(
+            <Manager />
+        );
+
+        await findByText('dragNdrop');
+
+        const files = [mockFile('1.txt'), { name: 'fakeFile', size: 1024 }] as File[]
+
+        act(() => {
+            managerRef.current.addLocalFiles(files);
+        });
+
+        await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(1));
+    });
+
 
     test('should test removeAllLocalFiles', async () => {
         mockFetch(true, 200, simpleResponse);

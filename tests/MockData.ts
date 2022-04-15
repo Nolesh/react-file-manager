@@ -1,12 +1,3 @@
-// https://www.freecodecamp.org/news/testing-react-hooks/
-// https://blog.cloudboost.io/how-to-mock-es6-modules-and-globals-with-jest-814de9b24c6d
-
-export const soundBeep =
-    'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU' +
-    Array(1e3).join('123');
-
-export const imgRedDot =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
 
 // https://medium.com/swlh/how-to-mock-a-fetch-api-request-with-jest-and-typescript-bb6adf673a00
 export function getGlobalObject<T>(): T {
@@ -61,8 +52,6 @@ export const mockAudio = () => {
 
     const initialValue = global.Audio;
     return ((global.Audio as unknown) = MockedAudio);
-
-    // return mockedAudio;
 };
 
 // -----------------------------------------------------------------------------
@@ -143,43 +132,44 @@ export const createEventWithFiles = (files: File[], eventType: string = null) =>
     return Object.assign(event, data);
 };
 
-// -----------------------------------------------------------------------------
-export const createFile = (data: string, name?: string, mimeType?: string) => {
-    name = name || 'mock.txt';
+export const mockFile = (name?: string, size?: number, mimeType?: string) => {
+    name = name || "mock.txt";
+    size = size || 1024;
     mimeType = mimeType || 'plain/txt';
+
+    const data = new Array(size+1).join('a');
 
     return new File([data], name, { type: mimeType });
 };
 
-// export const createFile = <T>(name: string, data: T, options?: FilePropertyBag) => {
-//     const json = JSON.stringify(data);
-//     const file = new File([json], name, options);
-//     return file;
-// }
+export const mockFileList = () => {
 
-// https://gist.github.com/josephhanson/372b44f93472f9c5a2d025d40e7bb4cc
-export const mockFile = (name?: string, size?: number, mimeType?: string) => {
-    name = name || 'mock.txt';
-    size = size || 1024;
-    mimeType = mimeType || 'plain/txt';
+    class FakeFileList implements Iterable<File>{
+        length: number;
+        files: File[];
+        constructor(...files: File[]){
+            this.length = files.length;
+            this.files = files;
+        }
+        [Symbol.iterator]() {
+            return this.files.values()
+        }
+    }
 
-    // function range(count: number) {
-    //     let output = "";
-    //     for (let i = 0; i < count; i++) {
-    //         output += "a";
-    //     }
-    //     return output;
-    // }
-    // const data = range(size);
+    const originalFileList = global.FileList;
+    (global.FileList as unknown) = FakeFileList;
 
-    const data = new Array(size + 1).join('a');
+    const create = (...files: File[]) => (
+        new FakeFileList(...files) as unknown as FileList
+    )
 
-    const blob = new Blob([data], { type: mimeType });
-    (blob as any).lastModifiedDate = new Date();
-    (blob as any).name = name;
+    const restore = () => { global.FileList = originalFileList }
 
-    return blob as File;
-};
+    return {
+        create,
+        restore
+    };
+}
 // -----------------------------------------------------------------------------
 
 export const useCustomTimer = () => {
@@ -215,8 +205,3 @@ export const useCustomTimer = () => {
         advanceTimersToNextTimer,
     };
 };
-
-// module.exports = {
-//     localStorageImpl,
-//     mockFile
-// }

@@ -3,8 +3,6 @@ import React, { useRef } from 'react';
 import '@testing-library/jest-dom';
 import { act, render, fireEvent, waitFor, screen } from '@testing-library/react';
 
-import { soundBeep } from '../MockData';
-
 import * as component from '../../src/lib/Components/AudioThumbnail';
 const { AudioThumbnail } = component;
 
@@ -35,7 +33,6 @@ const Thumbnail = (
 ) => {
     return (
         <AudioThumbnail
-            // src={soundBeep}
             src={'data:audio/wav;base64,'}
             duration={121}
             type="MPEG"
