@@ -110,8 +110,8 @@ const Component = () => {
     useEffect(() => {
         const handlePaste = (e: ClipboardEvent) => {
             if (e.clipboardData.files.length) {
-                const file = e.clipboardData.files[0];
-                fileManagerRef.current.addLocalFiles(file); // use this function to add files from the clipboard
+                const files = e.clipboardData.files;
+                fileManagerRef.current.addLocalFiles(files); // use this function to add files from the clipboard
             } else
                 alert('No data found in the clipboard. Copy an image first or take a screenshot');
         };
@@ -120,12 +120,10 @@ const Component = () => {
 
         document.addEventListener('dragover', onDocumentDrop, false);
         document.addEventListener('drop', onDocumentDrop, false);
-
         document.addEventListener('paste', handlePaste);
         return () => {
             document.removeEventListener('dragover', onDocumentDrop);
             document.removeEventListener('drop', onDocumentDrop);
-
             document.removeEventListener('paste', handlePaste);
         };
     }, []);

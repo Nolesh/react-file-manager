@@ -28,6 +28,7 @@ app.use(express.static('dist'));
 app.use(bodyParser.json()); // Parses JSON-formatted text for bodies with a Content-Type of application/json.
 app.use(bodyParser.raw({ limit: '1mb' })); // Parses HTTP body in to a Buffer for specified custom Content-Types, although the default accepted Content-Type is application/octet-stream.
 
+
 // rename
 app.patch('/api/file/:id', (req, res) => {
     // throwError('file not found', 404)
@@ -55,10 +56,9 @@ app.delete('/api/file/:id', (req, res) => {
 app.get('/api/file/:filename', (req, res, next) => {
     let filename = req.params.filename;
 
-    console.log(`Find the file by name (${filename}) and return it as a blob`);
-
     const path = `${dir_files}/${filename}`;
     if (fs.existsSync(path)) {
+        console.log(`Find the file by name (${filename}) and return it as a blob`);
         const newFileName = `${new Date().toLocaleDateString().split('/').join('-')}_${filename}`;
         // res.setHeader('filename', newFileName);
         res.download(path, newFileName);
@@ -72,10 +72,7 @@ app.get('/api/file/:filename', (req, res, next) => {
         // const file = fs.readFileSync(path);
         // res.send(file);
     } else {
-        // res.status(404);
-        // res.send(`file (${filename}) not found`);
-        // res.end();
-
+        console.log(`file (${filename}) not found`);
         throwError(`file (${filename}) not found`, 404);
     }
 });
@@ -118,6 +115,7 @@ app.get('/api/fetchFiles', (req, res) => {
 });
 
 app.post('/api/singleFileUpload', (req, res, next) => {
+
     const attachment = JSON.parse(
         req.headers['attachment'] || `{"fileId": "id-${new Date().getTime()}"}`
     );
@@ -222,7 +220,7 @@ app.put('/api/multipleFileUpload', (req, res, next) => {
     let offset = 0;
     fileNameArray.forEach((fileName, i) => {
         var buffer = Buffer.alloc(+fileSizeArray[i]);
-        req.body.copy(buffer, 0, offset, offset + buffer.length); // buffer.copy(target, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+        req.body.copy(buffer, 0, offset, offset + buffer.length);
         offset += buffer.length;
 
         const isSaved = utils.saveFile(fileName, buffer);

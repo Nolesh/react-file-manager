@@ -125,17 +125,15 @@ const Component = () => {
                 </Typography>
             </div>
 
-            <div style={{ textAlign: 'center' }}>
-                <FileManager
-                    {...basicParams}
-                    fileValidator={fileValidator}
-                    ignoreFileDuplicates="all" // none | local | remote | all
-                    maxFileCount={6}
-                    maxFileSize={1024 * 1024 * 2} // 2 Mb
-                    minFileSize={1024 * 100} // 100 kB
-                    accept={'image/*'}
-                />
-            </div>
+            <FileManager
+                {...basicParams}
+                fileValidator={fileValidator}
+                ignoreFileDuplicates="all" // none | local | remote | all
+                maxFileCount={6}
+                maxFileSize={1024 * 1024 * 2} // 2 Mb
+                minFileSize={1024 * 100} // 100 kB
+                accept={'image/*'}
+            />
         </>
     );
 };

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { Button, Checkbox, FormControlLabel, Typography } from '@material-ui/core';
 
@@ -14,7 +14,7 @@ type TRequestFunc = (
 // Retrieves the error message from the server error response
 // Since our error response is an object containing a status and a message,
 // we need to convert it to a string
-const getErrorMessage = (error: { status: number; message: string }) => error.message;
+const getErrorMessage = (error: { status: number; message: string }) => `${error.message} (${error.status})`;
 
 const request: TRequestFunc = (url, method = 'GET', body = null) => {
     return fetch(`/api/${url}`, {
@@ -63,8 +63,8 @@ const getUploadParams: TGetUploadParams = (localFileData) =>
                   fileId: localFileData.uid,
                   description: localFileData.description,
               },
-              // Extracts an array of files or a single file from an object because response was deliberately wrapped in an object
-              processResponse: (response) => response?.file ?? response?.files,
+              // Extracts a file from an object because response was deliberately wrapped in an object
+              processResponse: (response) => response?.file,
               checkResult: (result) => result.file_id === localFileData.uid,
               processError: getErrorMessage,
           };

@@ -47,9 +47,7 @@ export const CustomFileItemRootStyles = () => {
 };
 
 const Loader = () => (
-    <span className="loader">
-        <span className="small"></span>
-    </span>
+    <span className="loader"></span>
 );
 
 export const CustomFileItemThumbnail = ({ fileData, readOnly, disabled }) => {
@@ -156,8 +154,8 @@ export const CustomButtonsProps = ({
     uploadFilesInOneRequestMode,
 }) => {
     return {
-        uploadFile: { props: { style: { background: '#afa' } } },
-        removeLocalFile: { props: { style: { background: '#faa' } } },
+        uploadFile: { props: { style: { background: "#afa" }, title: 'Upload' } },
+        removeLocalFile: { props: { style: { background: "#faa" }, title: 'Delete' } },
         confirmDescription: { children: <span>Yes</span>, props: { style: { color: '#07bb00' } } },
         undoDescription: { children: <span>No</span>, props: { style: { color: 'red' } } },
         stub: <Loader />,

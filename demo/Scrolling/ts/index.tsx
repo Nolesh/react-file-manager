@@ -148,7 +148,6 @@ const Component = () => {
                     }}
                     overrides={{
                         Root: {
-                            // hideHeader: true, // Due to we are using the 'sortFiles' function, sorting in the header will not work. So we hide the header
                             styles: {
                                 dropZone: { height: 220 },
                             },

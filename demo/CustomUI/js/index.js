@@ -74,7 +74,7 @@ const basicParams = {
     },
     downloadFile: (fileData) => {
         // Uses the default filename(description) and handles the error if it exists
-        return request(`file/${fileData.fileName}1`).then((resp) => resp.blob());
+        return request(`file/${fileData.fileName}`).then((resp) => resp.blob());
     },
     onError: handleErrors,
 };
