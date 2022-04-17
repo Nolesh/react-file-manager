@@ -314,9 +314,8 @@ export function submitFormData(url: string, data: BodyInit, opts: any = {}) {
         }
         xhr.onload = () => {
             if (xhr.status == 200) resolve(xhr.response);
-            else reject(xhr.response);
+            else reject(xhr.response || { status: xhr.status, message: xhr.statusText });
         };
-        // xhr.onerror = reject;
         xhr.onerror = (e) =>
             reject({
                 status: 0,
