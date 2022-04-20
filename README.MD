@@ -30,7 +30,11 @@ A simple HTML5 file manager with a drag and drop zone used to cover the most com
 
 To install `React File Manager`, use the following command:
 ```sh
+# via npm
 npm install @nolesh/react-file-manager
+
+# via yarn
+yarn add @nolesh/react-file-manager
 ```
 React File Manager has [react](https://reactjs.org/) and [react-dom](https://reactjs.org/docs/react-dom.html) as peer dependencies. React version is  [16.8](https://reactjs.org/blog/2019/02/06/react-v16.8.0.html) or above is required because we use [hooks](https://reactjs.org/docs/hooks-intro.html).
 
@@ -160,7 +164,7 @@ const MySimpleFileManager = () => (
 );
 ```
 
-See more examples [here](https://github.com/nolesh/react-file-manager/tree/master/examples).
+**See more live examples [here](https://github.com/nolesh/react-file-manager/tree/master/examples).**
 
 
 ## Props & Methods
