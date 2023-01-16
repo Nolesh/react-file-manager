@@ -373,6 +373,7 @@ const renderFileItemWithClasses = ({
                                 className={classes.btn}
                                 style={{ marginBottom: 4 }}
                                 tabIndex={tabIndex}
+                                disabled={disabledOrReadonly}
                                 onClick={confirmDescriptionChanges}
                             >
                                 Yes
@@ -383,6 +384,7 @@ const renderFileItemWithClasses = ({
                                 title="Cancel"
                                 className={classes.btn}
                                 tabIndex={tabIndex}
+                                disabled={disabledOrReadonly}
                                 onClick={undoDescriptionChanges}
                             >
                                 No

@@ -300,7 +300,7 @@ describe('FileItemComponent', () => {
                 fileName: 'file.txt',
             };
 
-            const result = (update as Function)(item);
+            const result = (update as (item: any) => IRemoteFileData)(item);
 
             expect(result).toEqual(expectedResult);
             expect(item).toEqual(expectedResult);
@@ -403,7 +403,7 @@ describe('FileItemComponent', () => {
                 fileName: 'file.txt',
             };
 
-            const result = (update as Function)(item);
+            const result = (update as (item: any) => IRemoteFileData)(item);
 
             expect(result).toEqual(expectedResult);
             expect(item).toEqual(expectedResult);
@@ -462,6 +462,94 @@ describe('DefaultFileItemRenderer', () => {
         expect(within(getByRole('control')).queryAllByRole('button')).toHaveLength(2);
     });
 
+    test('should test classNames & item styles depending on state', () => {
+        const { rerender, getByRole, getAllByRole } = render(<Component />);
+        expect(getByRole('fileitem')).toHaveClass('display-item display-item-local');
+
+        const check = (props: Parameters<typeof Component>[0], className: string) => {
+            rerender(<Component {...props} />);
+            expect(getByRole('fileitem')).toHaveClass('display-item ' + className);
+        };
+
+        // disabled state
+        check(
+            { fileDataProps: { state: 'uploaded' }, fileItemProps: { disabled: true } },
+            'display-item-uploaded-disabled'
+        );
+        check(
+            { fileDataProps: { state: 'deletionError' }, fileItemProps: { disabled: true } },
+            'display-item-uploaded-disabled'
+        );
+        check(
+            { fileDataProps: { state: 'uploaded', disabled: true } },
+            'display-item-uploaded-disabled'
+        );
+        check(
+            { fileDataProps: { state: 'deletionError', disabled: true } },
+            'display-item-uploaded-disabled'
+        );
+        check({ fileDataProps: { state: 'uploading', disabled: true } }, 'display-item-uploading');
+        check(
+            { fileDataProps: { state: 'uploading' }, fileItemProps: { disabled: true } },
+            'display-item-uploading'
+        );
+
+        check(
+            { fileDataProps: { state: 'initial' }, fileItemProps: { disabled: true } },
+            'display-item-local-disabled'
+        );
+        check(
+            { fileDataProps: { state: 'initial', disabled: true } },
+            'display-item-local-disabled'
+        );
+        check(
+            { fileDataProps: { state: 'uploadError' }, fileItemProps: { disabled: true } },
+            'display-item-local-disabled'
+        );
+        check(
+            { fileDataProps: { state: 'uploadError', disabled: true } },
+            'display-item-local-disabled'
+        );
+
+        // edit mode
+        check(
+            { fileDataProps: { editMode: true }, fileItemProps: { isLocalFile: true } },
+            'display-item-local'
+        );
+        check(
+            { fileDataProps: { editMode: true }, fileItemProps: { isLocalFile: false } },
+            'display-item-edit-mode'
+        );
+
+        // rest states
+        check({ fileDataProps: { state: 'deletionError' } }, 'display-item-del-error');
+        check({ fileDataProps: { state: 'uploadError' } }, 'display-item-upload-error');
+        check({ fileDataProps: { state: 'uploaded' } }, 'display-item-uploaded');
+        check({ fileDataProps: { state: 'uploading' } }, 'display-item-uploading');
+    });
+
+    test('should disable buttons based on "disabled" or "readonly" params', () => {
+        const checkBtn = (disabled = true) => {
+            for (const btn of getAllByRole('button')) {
+                if (disabled) expect(btn).toHaveAttribute('disabled');
+                else expect(btn).not.toHaveAttribute('disabled');
+            }
+        };
+
+        const check = (props: Parameters<typeof Component>[0], disabled = true) => {
+            rerender(<Component {...props} />);
+            checkBtn(disabled);
+        };
+
+        const { rerender, getAllByRole } = render(<Component />);
+        checkBtn(false);
+
+        check({ fileDataProps: { readOnly: true } });
+        check({ fileDataProps: { disabled: true } });
+        check({ fileItemProps: { disabled: true } });
+        check({ fileItemProps: { readOnly: true } });
+    });
+
     test('should test fileActions', () => {
         // const defaultParams: IMenuItem = {
         const defaultParams: Parameters<typeof fileActions>[0] = {
@@ -485,10 +573,10 @@ describe('DefaultFileItemRenderer', () => {
         result = fileActions({
             ...defaultParams,
             ...{
-                viewFile: () => {},
-                changeDescriptionMode: () => {},
-                downloadFile: () => {},
-                deleteFile: () => {},
+                viewFile: () => undefined,
+                changeDescriptionMode: () => undefined,
+                downloadFile: () => undefined,
+                deleteFile: () => undefined,
             },
         });
 
@@ -567,7 +655,7 @@ describe('DefaultFileItemRenderer', () => {
         // set IntersectionObserver to undefined to invoke intersection callback
         const observer = window.IntersectionObserver;
         window.IntersectionObserver = undefined;
-        jest.spyOn(console, 'info').mockImplementation(() => {});
+        jest.spyOn(console, 'info').mockImplementation(() => undefined);
 
         // simulate loading video thumbnail with its duration
         rerender(
@@ -626,14 +714,14 @@ describe('DefaultFileItemRenderer customization', () => {
                     overrides: {
                         rootStyles: {
                             base: { className: 'test-base', style: { background: 'red' } },
-                            initial: { className: 'test-initial', style: { top: 10 } },
+                            local: { className: 'test-local', style: { top: 10 } },
                         },
                     },
                 }}
             />
         );
 
-        expect(getByRole('fileitem')).toHaveClass('test-base test-initial');
+        expect(getByRole('fileitem')).toHaveClass('test-base test-local');
         expect(getByRole('fileitem')).toHaveStyle('background: red; opacity: 1; top: 10px;');
 
         rerender(

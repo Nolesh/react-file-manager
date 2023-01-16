@@ -207,7 +207,7 @@ $errorColor: #f4645f;
     position: relative;
 }
 
-.display-item-initial-custom {
+.display-item-local-custom {
     background: linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%);
 }
 
@@ -229,8 +229,13 @@ $errorColor: #f4645f;
     background: linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%);
 }
 
-.display-item-disabled-custom {
+.display-item-uploaded-disabled-custom {
     background: #dde;
+    color: #999;
+}
+
+.display-item-local-disabled-custom {
+    background: #ded;
     color: #999;
 }
 

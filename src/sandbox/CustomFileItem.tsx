@@ -28,8 +28,8 @@ export const CustomFileItemRootStyles = (): TFileItemRootStyles => {
             className: 'display-item-custom',
             style: commonStyle,
         },
-        initial: {
-            className: 'display-item-initial-custom',
+        local: {
+            className: 'display-item-local-custom',
             // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)', ...commonStyle }
             // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
         },
@@ -52,8 +52,12 @@ export const CustomFileItemRootStyles = (): TFileItemRootStyles => {
             className: 'display-item-error-custom',
             // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
         },
-        disabled: {
-            className: 'display-item-disabled-custom',
+        uploadedDisabled: {
+            className: 'display-item-uploaded-disabled-custom',
+            // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
+        },
+        localDisabled: {
+            className: 'display-item-local-disabled-custom',
             // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
         },
     };

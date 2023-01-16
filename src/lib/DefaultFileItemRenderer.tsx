@@ -138,8 +138,11 @@ const getRootStyles = <T extends IOverriddenFileItem['rootStyles']>(
         style: { ...(defaultStyles.style || {}), ...(styles[fieldName] || {}) },
     });
 
-    if (disabled || fileData.disabled) return extStyles(rootStyle, classNames, styles, 'disabled');
-    else if (!isLocalFile && fileData.editMode)
+    if ((disabled || fileData.disabled) && fileData.state !== 'uploading') {
+        if (['uploaded', 'deletionError'].includes(fileData.state))
+            return extStyles(rootStyle, classNames, styles, 'uploadedDisabled');
+        else return extStyles(rootStyle, classNames, styles, 'localDisabled');
+    } else if (!isLocalFile && fileData.editMode)
         return extStyles(rootStyle, classNames, styles, 'editMode');
     else if (fileData.state === 'deletionError')
         return extStyles(rootStyle, classNames, styles, 'deletionError');
@@ -149,7 +152,7 @@ const getRootStyles = <T extends IOverriddenFileItem['rootStyles']>(
         return extStyles(rootStyle, classNames, styles, 'uploaded');
     else if (fileData.state === 'uploading')
         return extStyles(rootStyle, classNames, styles, 'uploading');
-    else return extStyles(rootStyle, classNames, styles, 'initial');
+    else return extStyles(rootStyle, classNames, styles, 'local');
 };
 
 const getThumbnail = (
@@ -334,50 +337,50 @@ const DefaultFileItemRenderer = ({
         [disabled, tabIndex, titles, { ...actionMenuProps }, { ...fileData }, { ...getActions() }]
     );
 
-    const buttonsProps: ReturnType<TButtons> = useMemo(
-        () =>
-            mergeObjects(
-                {
-                    uploadFile: {
-                        props: { title: titles.uploadFile, className: 'icon-button-pos' },
-                        children: <UploadIcon />,
-                    },
-                    cancelUpload: {
-                        props: { title: titles.cancelUpload, className: 'icon-button' },
-                        children: <ClearIcon style={{ fill: '#f4645f' }} />,
-                    },
-                    removeLocalFile: {
-                        props: {
-                            title: titles.removeLocalFile,
-                            className: !!uploadFile ? 'icon-button-neg' : 'icon-button',
-                        },
-                        children: <DeleteIcon />,
-                    },
-                    confirmDescription: {
-                        props: { title: titles.confirmDescription, className: 'icon-button-pos' },
-                        children: <CheckIcon />,
-                    },
-                    undoDescription: {
-                        props: { title: titles.undoDescription, className: 'icon-button-neg' },
-                        children: <ClearIcon />,
-                    },
-                    stub: (
-                        <LoadingIcon
-                            data-testid="loading-icon-stub"
-                            className="loading-icon"
-                            viewBox="0 0 24 24"
-                        />
-                    ),
+    const buttonsProps: ReturnType<TButtons> = useMemo(() => {
+        const getIconStyle = (fill?: string) =>
+            disabledOrReadonly ? { fill: '#aaa' } : fill ? { fill } : {};
+        return mergeObjects(
+            {
+                uploadFile: {
+                    props: { title: titles.uploadFile, className: 'icon-button-pos' },
+                    children: <UploadIcon style={getIconStyle()} />,
                 },
-                overrides?.buttons?.({
-                    fileData,
-                    readOnly,
-                    disabled,
-                    uploadFilesInOneRequestMode: !!uploadFile,
-                })
-            ),
-        [overrides?.buttons, readOnly, disabled, uploadFile, { ...fileData }, { ...titles }]
-    );
+                cancelUpload: {
+                    props: { title: titles.cancelUpload, className: 'icon-button' },
+                    children: <ClearIcon style={getIconStyle('#f4645f')} />,
+                },
+                removeLocalFile: {
+                    props: {
+                        title: titles.removeLocalFile,
+                        className: !!uploadFile ? 'icon-button-neg' : 'icon-button',
+                    },
+                    children: <DeleteIcon style={getIconStyle()} />,
+                },
+                confirmDescription: {
+                    props: { title: titles.confirmDescription, className: 'icon-button-pos' },
+                    children: <CheckIcon style={getIconStyle()} />,
+                },
+                undoDescription: {
+                    props: { title: titles.undoDescription, className: 'icon-button-neg' },
+                    children: <ClearIcon style={getIconStyle()} />,
+                },
+                stub: (
+                    <LoadingIcon
+                        data-testid="loading-icon-stub"
+                        className="loading-icon"
+                        viewBox="0 0 24 24"
+                    />
+                ),
+            },
+            overrides?.buttons?.({
+                fileData,
+                readOnly,
+                disabled,
+                uploadFilesInOneRequestMode: !!uploadFile,
+            })
+        );
+    }, [overrides?.buttons, disabledOrReadonly, uploadFile, { ...fileData }, { ...titles }]);
 
     const progressBar = useMemo(
         () =>
@@ -481,6 +484,7 @@ const DefaultFileItemRenderer = ({
                                     <Button
                                         {...buttonsProps.confirmDescription.props}
                                         tabIndex={tabIndex}
+                                        disabled={disabledOrReadonly}
                                         onClick={confirmDescriptionChanges}
                                     >
                                         {buttonsProps.confirmDescription.children}
@@ -488,6 +492,7 @@ const DefaultFileItemRenderer = ({
                                     <Button
                                         {...buttonsProps.undoDescription.props}
                                         tabIndex={tabIndex}
+                                        disabled={disabledOrReadonly}
                                         onClick={undoDescriptionChanges}
                                     >
                                         {buttonsProps.undoDescription.children}

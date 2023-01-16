@@ -87,13 +87,15 @@ const getRootStyles = (fileData: ILocalFileData, disabled: boolean, isLocalFile:
         className: `${defaultClassNames.base} ${defaultClassNames[key]}`,
     });
 
-    if (disabled || fileData.disabled) return cls('disabled');
-    else if (!isLocalFile && fileData.editMode) return cls('editMode');
+    if ((disabled || fileData.disabled) && fileData.state !== 'uploading') {
+        if (['uploaded', 'deletionError'].includes(fileData.state)) return cls('uploadedDisabled');
+        else return cls('localDisabled');
+    } else if (!isLocalFile && fileData.editMode) return cls('editMode');
     else if (fileData.state === 'deletionError') return cls('deletionError');
     else if (fileData.state === 'uploadError') return cls('uploadError');
     else if (fileData.state === 'uploaded') return cls('uploaded');
     else if (fileData.state === 'uploading') return cls('uploading');
-    else return cls('initial');
+    else return cls('local');
 };
 
 const getThumbnail = (fileData: ILocalFileData, type: string, root: HTMLDivElement) => (
@@ -198,6 +200,9 @@ const CustomFileItemRenderer = ({
     const disabledOrReadonly = disabled || fileData.disabled || readOnly || fileData.readOnly;
     const tabIndex = noKeyboard ? -1 : 0;
 
+    const getIconStyle = (fill?: string) =>
+        disabledOrReadonly ? { fill: '#aaa' } : fill ? { fill } : {};
+
     const compositeComponent = (
         <div
             {...getItemProps()}
@@ -242,7 +247,7 @@ const CustomFileItemRenderer = ({
                                     disabled={disabledOrReadonly}
                                     onClick={() => uploadFile(fileData)}
                                 >
-                                    <UploadIcon />
+                                    <UploadIcon style={getIconStyle()} />
                                 </Button>
                             )}
                             <Button
@@ -252,7 +257,7 @@ const CustomFileItemRenderer = ({
                                 disabled={!deleteFile || disabledOrReadonly}
                                 onClick={deleteFile && deleteFile.bind(null, fileData)}
                             >
-                                <DeleteIcon />
+                                <DeleteIcon style={getIconStyle()} />
                             </Button>
                         </>
                     )}
@@ -263,7 +268,7 @@ const CustomFileItemRenderer = ({
                             tabIndex={tabIndex}
                             onClick={fileData.cancelUpload}
                         >
-                            <ClearIcon style={{ fill: '#f4645f' }} />
+                            <ClearIcon style={getIconStyle('#f4645f')} />
                         </Button>
                     )}
                     {fileData.state === 'uploading' && !fileData.cancelUpload && (
@@ -294,17 +299,19 @@ const CustomFileItemRenderer = ({
                                 title="Confirm"
                                 className="icon-button-pos"
                                 tabIndex={tabIndex}
+                                disabled={disabledOrReadonly}
                                 onClick={confirmDescriptionChanges}
                             >
-                                <CheckIcon />
+                                <CheckIcon style={getIconStyle()} />
                             </Button>
                             <Button
                                 title="Confirm"
                                 className="icon-button-neg"
                                 tabIndex={tabIndex}
+                                disabled={disabledOrReadonly}
                                 onClick={undoDescriptionChanges}
                             >
-                                <ClearIcon />
+                                <ClearIcon style={getIconStyle()} />
                             </Button>
                         </>
                     )}

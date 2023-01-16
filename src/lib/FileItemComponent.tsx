@@ -193,13 +193,14 @@ export interface IFileItemProps {
 
 export const defaultClassNames = {
     base: 'display-item',
-    initial: 'display-item-initial',
+    local: 'display-item-local',
     uploading: 'display-item-uploading',
     uploaded: 'display-item-uploaded',
     uploadError: 'display-item-upload-error',
     deletionError: 'display-item-del-error',
     editMode: 'display-item-edit-mode',
-    disabled: 'display-item-disabled',
+    uploadedDisabled: 'display-item-uploaded-disabled',
+    localDisabled: 'display-item-local-disabled',
 };
 
 // -----------------------------------------------------------------------------
