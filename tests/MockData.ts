@@ -1,4 +1,3 @@
-
 // https://medium.com/swlh/how-to-mock-a-fetch-api-request-with-jest-and-typescript-bb6adf673a00
 export function getGlobalObject<T>(): T {
     return (
@@ -133,48 +132,49 @@ export const createEventWithFiles = (files: File[], eventType: string = null) =>
 };
 
 export const mockFile = (name?: string, size?: number, mimeType?: string) => {
-    name = name || "mock.txt";
+    name = name || 'mock.txt';
     size = size || 1024;
     mimeType = mimeType || 'plain/txt';
 
-    const data = new Array(size+1).join('a');
+    const data = new Array(size + 1).join('a');
 
     return new File([data], name, { type: mimeType });
 };
 
 export const mockFileList = () => {
-
-    class FakeFileList implements Iterable<File>{
+    class FakeFileList implements Iterable<File> {
         length: number;
         files: File[];
-        constructor(...files: File[]){
+        constructor(...files: File[]) {
             this.length = files.length;
             this.files = files;
         }
         [Symbol.iterator]() {
-            return this.files.values()
+            return this.files.values();
         }
     }
 
     const originalFileList = global.FileList;
     (global.FileList as unknown) = FakeFileList;
 
-    const create = (...files: File[]) => (
-        new FakeFileList(...files) as unknown as FileList
-    )
+    const create = (...files: File[]) => new FakeFileList(...files) as unknown as FileList;
 
-    const restore = () => { global.FileList = originalFileList }
+    const restore = () => {
+        global.FileList = originalFileList;
+    };
 
     return {
         create,
-        restore
+        restore,
     };
-}
+};
 // -----------------------------------------------------------------------------
 
 export const useCustomTimer = () => {
+    type TFunc = { callback: () => void; ms: number };
     let time = 0;
-    let timers: { callback: () => void; ms: number }[] = [];
+    let timers: TFunc[] = [];
+    let initTimers: TFunc[] = [];
 
     const setCustomTimer = (callback: () => void, ms = 0) => {
         if (ms <= time) {
@@ -183,6 +183,9 @@ export const useCustomTimer = () => {
         }
         timers.push({ callback, ms });
         timers.sort((a, b) => a.ms - b.ms);
+
+        initTimers = [];
+        initTimers.push(...timers);
     };
 
     const advanceTimersByTime = (ms: number) => {
@@ -199,9 +202,16 @@ export const useCustomTimer = () => {
         if (timers.length) advanceTimersByTime(timers[0].ms - time);
     };
 
+    const reset = () => {
+        time = 0;
+        timers = [];
+        timers.push(...initTimers);
+    };
+
     return {
         setCustomTimer,
         advanceTimersByTime,
         advanceTimersToNextTimer,
+        reset,
     };
 };

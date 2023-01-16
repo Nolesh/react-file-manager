@@ -38,7 +38,7 @@ import {
 import { createMaterialFileItemRenderer } from './MaterialFileItemRenderer';
 import CustomFileItemRenderer from './CustomFileItemRenderer';
 
-import { Button, Paper, Typography } from '@material-ui/core';
+import { Button, Checkbox, FormControlLabel, Paper, Typography } from '@material-ui/core';
 
 const uploadFilesInOneRequest = false;
 const uploadFileURL = '/rest';
@@ -266,6 +266,9 @@ export const Manager: FC = (): ReactElement => {
     const [isLoading, setIsLoading] = useState<boolean>();
     const [isUploading, setIsUploading] = useState<boolean>();
 
+    const [readOnlyMode, setReadOnlyMode] = useState<boolean>();
+    const [disabled, setDisabled] = useState<boolean>();
+
     const ref = useRef<IFileManagerRef>();
     const progressRef = useRef<HTMLDivElement>();
 
@@ -476,12 +479,12 @@ export const Manager: FC = (): ReactElement => {
                         // accept='image/*'
                         uploadFilesInOneRequest={uploadFilesInOneRequest}
                         addFileDescription
+                        readOnly={readOnlyMode}
+                        disabled={disabled}
                         // preventDropOnDocument={false}
                         // ignoreFileDuplicates='none'
                         // multiple={false}
                         // autoUpload
-                        // disabled
-                        // readOnly
                         // noClick
                         // noDrag
                         // noKeyboard
@@ -612,6 +615,17 @@ export const Manager: FC = (): ReactElement => {
                     >
                         Reload
                     </Button>
+
+                    <Paper>
+                        <FormControlLabel
+                            control={<Checkbox onClick={() => setReadOnlyMode((mode) => !mode)} />}
+                            label="Read-Only mode"
+                        />
+                        <FormControlLabel
+                            control={<Checkbox onClick={() => setDisabled((value) => !value)} />}
+                            label="Disable File Manager"
+                        />
+                    </Paper>
                 </div>
             </Paper>
         </div>

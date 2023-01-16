@@ -25,7 +25,11 @@ import * as utils from '../src/lib/Utils';
 
 import FileManager, { IFileManagerRef, IFileManagerProps, TFileValidator } from '../src/lib';
 import { IFileData, ILocalFileData, IRemoteFileData } from '../src/lib/FileItemComponent';
-import { errorTxtInvalidFileFields, errorTxtUploadedFilesNotArray } from '../src/lib/Utils/errors';
+import {
+    errorTxtInvalidFileFields,
+    errorTxtUploadedFilesNotArray,
+    errorTxtWrongUploadParams,
+} from '../src/lib/Utils/errors';
 import ErrorBoundary from './ErrorBoundary';
 
 const simpleResponse = [
@@ -80,7 +84,11 @@ let root: HTMLElement = null;
 const Manager = (props: Partial<IFileManagerProps>) => {
     managerRef = React.useRef();
 
-    const request = (url: string, method = 'GET', body: object | null = null): Promise<any> => {
+    const request = (
+        url: string,
+        method = 'GET',
+        body: Record<string, unknown> | null = null
+    ): Promise<any> => {
         return fetch(`/api/${url}`, {
             method: method,
             headers: {
@@ -123,6 +131,7 @@ const Manager = (props: Partial<IFileManagerProps>) => {
                     titles: {
                         cancelUpload: 'cancelUpload',
                         uploadFile: 'upload',
+                        removeLocalFile: 'remove',
                     },
                 },
             }}
@@ -161,6 +170,7 @@ function mockFetch(ok: boolean, status: number, data?: { [key: string]: any }, d
     global.fetch = jest.fn().mockImplementation(() => mockFetchPromise);
 }
 
+// ---------------------------------------------------------------------
 const mockSubmitFormData = (
     promise: Promise<string> = new Promise((res) => setTimeout(() => res(null))),
     xhr: XMLHttpRequest = null
@@ -175,6 +185,53 @@ const mockSubmitFormData = (
     });
     return spy;
 };
+
+const mockUploadFuncReject = (xhr?: XMLHttpRequest, rejectObj?: any) => {
+    const rejObj = { status: 0, message: 'The file upload was aborted', type: 'abort' };
+    return mockUploadFunc((res, rej) => rej(rejectObj || rejObj), xhr);
+};
+
+const mockUploadFuncResolve = (xhr?: XMLHttpRequest, resolveObj?: any) => {
+    return mockUploadFunc((res) => res(resolveObj || { fileName: 'a1.txt', fileSize: 1024 }), xhr);
+};
+
+const mockUploadFunc = (
+    func?: (res: (val: any) => void, rej: (reason: any) => void) => void,
+    xhr?: XMLHttpRequest
+) => {
+    const { setCustomTimer, advanceTimersByTime, advanceTimersToNextTimer } = useCustomTimer();
+
+    const promise = new Promise((res, rej) =>
+        setCustomTimer(() => (!!func ? func(res, rej) : res(null)), 5)
+    );
+    // promise.catch(() => {});
+
+    let progress: any[] = [];
+
+    const spy = jest.spyOn(utils, 'submitFormData');
+    spy.mockImplementation((url, formData, opts) => {
+        progress.push(opts.onProgress);
+        return {
+            promise,
+            xhr: xhr || ({ abort: () => undefined as any } as unknown as XMLHttpRequest),
+        };
+    });
+
+    return {
+        setCustomTimer,
+        advanceTimersByTime,
+        advanceTimersToNextTimer,
+        getProgress: () => progress,
+        updateProgress: () => {
+            act((value?: number) => {
+                progress.map((x) => x({ total: 1024, loaded: 512 }));
+                jest.advanceTimersByTime(value || 100);
+            });
+        },
+        mockRestore: () => spy.mockRestore(),
+    };
+};
+// ---------------------------------------------------------------------
 
 const mockResponse = (fileCount = 0) => {
     const resp: IFileData[] = [];
@@ -207,7 +264,7 @@ const mockFormData = () => {
 const setObserverToNull = () => {
     const observer = window.IntersectionObserver;
     window.IntersectionObserver = undefined;
-    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => undefined);
     return () => ((window.IntersectionObserver = observer), spy.mockRestore());
 };
 
@@ -432,6 +489,7 @@ describe('FileManager preview', () => {
         ).toHaveAttribute('src', 'image-src');
 
         spy.mockRestore();
+        jest.runAllTimers();
     });
 
     test('should render a fallback if an error occurs during image preview creation', async () => {
@@ -473,6 +531,7 @@ describe('FileManager preview', () => {
         spyConsoleWarn.mockRestore();
         spyConsoleErr.mockRestore();
         spy.mockRestore();
+        jest.runAllTimers();
     });
 
     test('should render default video preview', async () => {
@@ -497,6 +556,7 @@ describe('FileManager preview', () => {
         ).toHaveAttribute('src', 'video-image-src');
 
         spy.mockRestore();
+        jest.runAllTimers();
     });
 
     test('should render a fallback if an error occurs during video preview creation', async () => {
@@ -523,6 +583,7 @@ describe('FileManager preview', () => {
 
         spyConsoleErr.mockRestore();
         spy.mockRestore();
+        jest.runAllTimers();
     });
 
     test('should render default audio preview', async () => {
@@ -552,6 +613,7 @@ describe('FileManager preview', () => {
 
         mockedAudio.mockRestore();
         (global.URL.createObjectURL as jest.Mock).mockReset();
+        jest.runAllTimers();
     });
 
     test('should render a fallback if an error occurs during audio preview creation', async () => {
@@ -594,6 +656,7 @@ describe('FileManager preview', () => {
         spyConsoleErr.mockRestore();
         mockedAudio.mockRestore();
         (global.URL.createObjectURL as jest.Mock).mockReset();
+        jest.runAllTimers();
     });
 
     test('should test custom preview function', async () => {
@@ -654,10 +717,11 @@ describe('FileManager preview', () => {
         expect(spy).toBeCalledTimes(1);
         expect(queryAllByRole('img').length).toEqual(3);
         expect(queryAllByRole('img')[2]).toHaveAttribute('src', 'base64ImageData');
+        jest.runAllTimers();
     });
 });
 
-describe('FileManager uploading', () => {
+describe('getUploadParams function', () => {
     beforeEach(() => {
         mockFetch(true, 200, []);
         jest.useFakeTimers();
@@ -669,7 +733,7 @@ describe('FileManager uploading', () => {
         jest.useRealTimers();
     });
 
-    test('should check getUploadParams', async () => {
+    test('should obtain all passed params', async () => {
         const spy = mockSubmitFormData();
 
         const { formDataFields, restore } = mockFormData();
@@ -727,6 +791,10 @@ describe('FileManager uploading', () => {
             })
         );
 
+        act(() => {
+            jest.advanceTimersByTime(100);
+        });
+
         expect(formDataFields).toEqual({
             fileToUpload: expect.any(Blob),
             customField: 'some value',
@@ -736,12 +804,213 @@ describe('FileManager uploading', () => {
         spy.mockRestore();
     });
 
-    test('should upload a single file and clear the list', async () => {
+    test('should obtain all passed params (one request upload mode)', async () => {
         const spy = mockSubmitFormData();
+
+        const { formDataFields, restore } = mockFormData();
+
+        const url = '/api/multipleFileUpload';
+        const fileFieldName = 'fileToUpload';
+        const fields = {
+            customField: 'some value',
+        };
+        const headers = {
+            customHeader: 'test',
+        };
+        const method = 'PUT';
+        const timeout = 1000;
+        const body = 'test body';
+
+        let incomingFiles = null;
+
+        const { getByRole, findByText, findByTestId } = render(
+            <Manager
+                uploadFilesInOneRequest
+                getUploadParams={(files) => (
+                    (incomingFiles = files),
+                    {
+                        URL: url,
+                        fileFieldName,
+                        fields,
+                        headers,
+                        method,
+                        timeout,
+                        body,
+                    }
+                )}
+            />
+        );
+
+        await findByText('dragNdrop');
+
+        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
+        fireEvent.change(input, { target: { files: [mockFile()] } });
+
+        await findByTestId('file-container');
+
+        act(() => {
+            managerRef.current.upload();
+        });
+
+        expect(Array.isArray(incomingFiles)).toBe(true);
+
+        await waitFor(() =>
+            expect(spy).toHaveBeenCalledWith(url, body, {
+                headers,
+                method,
+                onProgress: expect.any(Function),
+                timeout,
+            })
+        );
+
+        act(() => {
+            jest.advanceTimersByTime(100);
+        });
+
+        expect(formDataFields).toEqual({
+            fileToUpload: expect.any(Blob),
+            customField: 'some value',
+        });
+
+        restore();
+        spy.mockRestore();
+    });
+
+    test('should obtain all passed params via async function', async () => {
+        const spy = mockSubmitFormData();
+        const { setCustomTimer, advanceTimersByTime, advanceTimersToNextTimer } = useCustomTimer();
+
+        const { formDataFields, restore } = mockFormData();
+
+        const url = '/api/singleFileUpload';
+        const fileFieldName = 'fileToUpload';
+        const fields = {
+            customField: 'some value',
+        };
+        const headers = {
+            customHeader: 'test',
+        };
+        const method = 'PUT';
+        const timeout = 1000;
+        const body = 'test body';
+
+        let incomingFiles = null;
+
+        const { getByRole, findByText, findByTestId, findByTitle, getByTitle } = render(
+            <Manager
+                getUploadParams={async (files) => {
+                    incomingFiles = files;
+                    return await new Promise((res) =>
+                        setCustomTimer(() => {
+                            res({
+                                URL: url,
+                                fileFieldName,
+                                fields,
+                                headers,
+                                method,
+                                timeout,
+                                body,
+                            });
+                        }, 5)
+                    );
+                }}
+            />
+        );
+
+        await findByText('dragNdrop');
+
+        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
+        fireEvent.change(input, { target: { files: [mockFile()] } });
+
+        await findByTestId('file-container');
+
+        act(() => {
+            getByTitle('upload').click();
+        });
+
+        advanceTimersToNextTimer();
+
+        expect(Array.isArray(incomingFiles)).toBe(false);
+
+        await waitFor(() =>
+            expect(spy).toHaveBeenCalledWith(url, body, {
+                headers,
+                method,
+                onProgress: expect.any(Function),
+                timeout,
+            })
+        );
+
+        act(() => {
+            jest.advanceTimersByTime(100);
+        });
+
+        expect(formDataFields).toEqual({
+            fileToUpload: expect.any(Blob),
+            customField: 'some value',
+        });
+
+        restore();
+        spy.mockRestore();
+    });
+
+    test('should throw an error if the parameters are wrong', async () => {
+        const spy = mockSubmitFormData();
+
+        const { formDataFields, restore } = mockFormData();
+
+        const { getByRole, findByText, findByTestId, findByTitle, getByTitle } = render(
+            <Manager getUploadParams={(files) => ({} as any)} />
+        );
+
+        await findByText('dragNdrop');
+
+        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
+        fireEvent.change(input, { target: { files: [mockFile()] } });
+
+        await findByTestId('file-container');
+
+        await act(async () => {
+            try {
+                await managerRef.current.upload();
+            } catch (e) {
+                expect(e.message).toBe(errorTxtWrongUploadParams);
+            }
+        });
+
+        restore();
+        spy.mockRestore();
+        jest.runAllTimers();
+    });
+});
+
+describe('FileManager uploading', () => {
+    beforeEach(() => {
+        mockFetch(true, 200, []);
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.clearAllTimers();
+        // jest.runOnlyPendingTimers();
+        jest.useRealTimers();
+    });
+
+    test('should upload a single file and clear the list', async () => {
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
 
         const onFilesUploaded: IFileManagerProps['onFilesUploaded'] = jest.fn();
 
-        const { getByRole, findByText, findByTestId, getAllByRole, getByTitle } = render(
+        const {
+            getByRole,
+            findByText,
+            findByTestId,
+            getAllByRole,
+            findAllByRole,
+            findByTitle,
+            getByTitle,
+            getByTestId,
+        } = render(
             <Manager viewFile={() => Promise.resolve()} onFilesUploaded={onFilesUploaded} />
         );
         await findByText('dragNdrop');
@@ -754,11 +1023,19 @@ describe('FileManager uploading', () => {
         expect(managerRef.current.remoteFiles.length).toEqual(0);
 
         act(() => {
-            getAllByRole('button')[0].click();
+            // getAllByRole('button')[0].click();
+            getByTitle('upload').click();
         });
+
+        let stub = await findByTestId('loading-icon-stub');
+        expect(stub).toBeInTheDocument();
+
+        updateProgress();
 
         expect(getByTitle('cancelUpload')).toBeInTheDocument();
         expect(processResponseSimple).toBeCalledTimes(0);
+
+        advanceTimersToNextTimer();
 
         await waitForElementToBeRemoved(() => getAllByRole('fileitem'));
 
@@ -768,11 +1045,11 @@ describe('FileManager uploading', () => {
 
         expect(onFilesUploaded).toHaveBeenCalledWith([expect.any(Object)]);
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should upload a single file and show it in the list', async () => {
-        const spy = mockSubmitFormData();
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
         mockResponse(1);
 
         const onFilesUploaded: IFileManagerProps['onFilesUploaded'] = jest.fn();
@@ -796,6 +1073,12 @@ describe('FileManager uploading', () => {
             getAllByRole('button')[0].click();
         });
 
+        await findByTestId('loading-icon-stub');
+
+        updateProgress();
+
+        advanceTimersToNextTimer();
+
         expect(getByTitle('cancelUpload')).toBeInTheDocument();
         expect(processResponseSimple).toBeCalledTimes(0);
 
@@ -807,7 +1090,7 @@ describe('FileManager uploading', () => {
 
         expect(onFilesUploaded).toHaveBeenCalledWith([expect.any(Object)]);
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should upload multiple files', async () => {
@@ -834,6 +1117,12 @@ describe('FileManager uploading', () => {
             managerRef.current.upload();
         });
 
+        await findByTestId('loading-icon-stub');
+
+        act(() => {
+            jest.advanceTimersByTime(100);
+        });
+
         await waitFor(() => expect(queryAllByRole('menu', { hidden: true }).length).toEqual(2));
         expect(processResponseSimple).toBeCalledTimes(2);
         expect(managerRef.current.localFiles.length).toEqual(0);
@@ -850,12 +1139,15 @@ describe('FileManager uploading', () => {
 
         const retObj = { status: 0, message: 'The file upload was aborted', type: 'abort' };
         const promise = new Promise((_, rej) => setTimeout(() => rej(retObj)));
-        promise.catch(() => {}); // https://github.com/facebook/jest/issues/6028#issuecomment-567851031
+        promise.catch(() => undefined); // https://github.com/facebook/jest/issues/6028#issuecomment-567851031
 
-        const spy = mockSubmitFormData(
-            promise as Promise<string>,
-            { abort } as unknown as XMLHttpRequest
-        );
+        // const spy = mockSubmitFormData(
+        //     promise as Promise<string>,
+        //     { abort } as unknown as XMLHttpRequest
+        // );
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFuncReject({
+            abort,
+        } as unknown as XMLHttpRequest);
 
         const {
             getByRole,
@@ -880,9 +1172,15 @@ describe('FileManager uploading', () => {
             getAllByRole('button')[0].click();
         });
 
+        await findByTestId('loading-icon-stub');
+
+        updateProgress();
+
         act(() => {
             getByTitle('cancelUpload').click();
         });
+
+        advanceTimersToNextTimer();
 
         await waitForElementToBeRemoved(() => queryByTitle('cancelUpload'));
         expect(getByRole('fileitem')).toHaveClass('display-item-upload-error');
@@ -891,7 +1189,7 @@ describe('FileManager uploading', () => {
         expect(errorId).toEqual('upload_aborted');
         // expect(promise).rejects.toEqual(retObj);
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should abort uploading of multiple files', async () => {
@@ -899,12 +1197,15 @@ describe('FileManager uploading', () => {
 
         const retObj = { status: 0, message: 'The file upload was aborted', type: 'abort' };
         const promise = new Promise((_, rej) => setTimeout(() => rej(retObj)));
-        promise.catch(() => {});
+        promise.catch(() => undefined);
 
-        const spy = mockSubmitFormData(
-            promise as Promise<string>,
-            { abort } as unknown as XMLHttpRequest
-        );
+        // const spy = mockSubmitFormData(
+        //     promise as Promise<string>,
+        //     { abort } as unknown as XMLHttpRequest
+        // );
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFuncReject({
+            abort,
+        } as unknown as XMLHttpRequest);
 
         const {
             getByRole,
@@ -931,29 +1232,30 @@ describe('FileManager uploading', () => {
             managerRef.current.upload();
         });
 
+        await findByTestId('loading-icon-stub');
+
+        updateProgress();
+
         act(() => {
             managerRef.current.cancelUpload();
         });
+
+        advanceTimersToNextTimer();
 
         await waitFor(() => expect(queryByTitle('cancelUpload')).not.toBeInTheDocument());
 
         expect(abort).toBeCalledTimes(2);
         expect(errorId).toEqual(new Array(2).fill('upload_aborted'));
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should abort file uploading when component was unmounted', async () => {
         const abort = jest.fn();
 
-        const retObj = { status: 0, message: 'The file upload was aborted', type: 'abort' };
-        const promise = new Promise((_, rej) => setTimeout(() => rej(retObj)));
-        promise.catch(() => {});
-
-        const spy = mockSubmitFormData(
-            promise as Promise<string>,
-            { abort } as unknown as XMLHttpRequest
-        );
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFuncReject({
+            abort,
+        } as unknown as XMLHttpRequest);
 
         const onUnmountComponent = jest.fn();
 
@@ -972,16 +1274,23 @@ describe('FileManager uploading', () => {
             queryAllByRole('button')[0].click();
         });
 
+        await findByTestId('loading-icon-stub');
+
+        updateProgress();
+
         unmount();
 
         expect(abort).toBeCalledTimes(1);
         expect(onUnmountComponent).toBeCalledTimes(1);
 
-        spy.mockRestore();
+        jest.runAllTimers();
+        mockRestore();
     });
 
     test('should skip uploading if component is in read-only state or disabled', async () => {
-        const { rerender, findByText, getByRole, findByTestId } = render(<Manager />);
+        const { rerender, findByText, getByRole, findByTestId, getAllByRole, getByTitle } = render(
+            <Manager />
+        );
 
         await findByText('dragNdrop');
 
@@ -990,15 +1299,22 @@ describe('FileManager uploading', () => {
 
         await findByTestId('file-container');
 
+        expect.assertions(8);
+
+        expect(getByTitle('upload')).not.toHaveAttribute('disabled');
+        expect(getByTitle('remove')).not.toHaveAttribute('disabled');
+
         rerender(<Manager readOnly />);
 
-        expect.assertions(2);
+        expect(getByTitle('upload')).toHaveAttribute('disabled');
+        expect(getByTitle('remove')).toHaveAttribute('disabled');
 
         act(() => {
             managerRef.current
                 .upload()
                 .then((result) => {
                     expect(result).toBe(undefined);
+                    // waitForPromise = false;
                 })
                 .catch((err) => {
                     console.error(err);
@@ -1008,6 +1324,9 @@ describe('FileManager uploading', () => {
 
         rerender(<Manager disabled />);
 
+        expect(getByTitle('upload')).toHaveAttribute('disabled');
+        expect(getByTitle('remove')).toHaveAttribute('disabled');
+
         act(() => {
             managerRef.current
                 .upload()
@@ -1019,6 +1338,9 @@ describe('FileManager uploading', () => {
                     expect(1).toBe(1);
                 });
         });
+
+        // screen.debug();
+        jest.runAllTimers();
     });
 
     test('should skip uploading if there are no files', async () => {
@@ -1042,12 +1364,12 @@ describe('FileManager uploading', () => {
     });
 
     test('should skip uploading if files are already uploading', async () => {
-        const spy = mockSubmitFormData();
+        // const spy = mockSubmitFormData();
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
         mockResponse(1);
 
-        const { getByRole, queryAllByRole, findByText, findByTestId, findByRole } = render(
-            <Manager viewFile={() => null} />
-        );
+        const { getByRole, queryAllByRole, findAllByRole, findByText, findByTestId, findByRole } =
+            render(<Manager viewFile={() => null} />);
 
         await findByText('dragNdrop');
 
@@ -1070,7 +1392,8 @@ describe('FileManager uploading', () => {
                 });
         });
 
-        expect(queryAllByRole('progressbar').length).toBe(1);
+        const progress = await findAllByRole('progressbar');
+        expect(progress.length).toBe(1);
 
         act(() => {
             managerRef.current
@@ -1084,9 +1407,11 @@ describe('FileManager uploading', () => {
                 });
         });
 
+        advanceTimersToNextTimer();
+
         await findByRole('menu', { hidden: true });
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should skip uploading of file that is already uploading', async () => {
@@ -1110,14 +1435,15 @@ describe('FileManager uploading', () => {
             button.click();
         });
 
-        await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+        await findByText('dragNdrop');
+
+        expect(spy).toHaveBeenCalledTimes(1);
 
         // expect.assertions(7);
         // fireEvent.change(input, {target: {files: [mockFile('2.txt')]}});
-        //
+
         // await waitFor(() => expect(queryAllByRole('fileitem').length).toBe(2));
-        //
-        //
+
         // act(() => {
         //     managerRef.current.upload()
         //     .then(result => {
@@ -1129,8 +1455,7 @@ describe('FileManager uploading', () => {
         //         console.error(err);
         //         expect(1).toBe(1);
         //     })
-        //
-        //
+
         //     managerRef.current.upload()
         //     .then(result => {
         //         expect(result).toBe(undefined);
@@ -1140,7 +1465,7 @@ describe('FileManager uploading', () => {
         //         expect(1).toBe(1);
         //     })
         // });
-        //
+
         // await waitForElementToBeRemoved(() => getByRole('progressbar'));
         // expect(spy).toHaveBeenCalledTimes(2);
 
@@ -1172,7 +1497,7 @@ describe('FileManager uploading', () => {
                 ),
                 xhr: null,
             }))
-            .mockImplementationOnce(() => ({
+            .mockImplementationOnce((url, formData, opts) => ({
                 promise: new Promise((res) =>
                     setCustomTimer(() => res({ fileName: 'e5.txt', fileSize: 1024 }), 10)
                 ),
@@ -1218,7 +1543,7 @@ describe('FileManager uploading', () => {
 
         await findByTestId('file-container');
 
-        expect.assertions(33);
+        expect.assertions(35);
 
         act(() => {
             managerRef.current
@@ -1271,7 +1596,7 @@ describe('FileManager uploading', () => {
         expect(getAllByRole('fileitem')[4]).toHaveClass('display-item-uploading');
 
         act(() => {
-            queryAllByTitle('upload')[0].click();
+            queryAllByTitle('upload')[1].click();
         });
 
         act(() => {
@@ -1279,6 +1604,7 @@ describe('FileManager uploading', () => {
         });
 
         await waitFor(() => expect(queryAllByRole('menu', { hidden: true }).length).toBe(2));
+        await waitFor(() => expect(queryAllByRole('progressbar').length).toBe(2));
 
         expect(getAllByRole('fileitem')[0]).toHaveClass('display-item-uploaded');
         expect(getAllByRole('fileitem')[1]).toHaveClass('display-item-uploaded');
@@ -1313,24 +1639,27 @@ describe('FileManager uploading', () => {
     });
 
     test('should test uploading progress', async () => {
-        let progress: Function = null;
+        // let progress: Function = null;
 
-        const spy = jest.spyOn(utils, 'submitFormData');
-        spy.mockImplementation((url, formData, opts) => {
-            progress = opts.onProgress;
-            return {
-                promise: new Promise((res) =>
-                    setTimeout(() => res({ fileName: 'a1.txt', fileSize: 1024 }))
-                ),
-                xhr: { abort: () => {} } as unknown as XMLHttpRequest,
-            };
-        });
+        // const spy = jest.spyOn(utils, 'submitFormData');
+        // spy.mockImplementation((url, formData, opts) => {
+        //     progress = opts.onProgress;
+        //     return {
+        //         promise: new Promise((res) =>
+        //             setTimeout(() => res({ fileName: 'a1.txt', fileSize: 1024 }))
+        //         ),
+        //         xhr: { abort: () => {} } as unknown as XMLHttpRequest,
+        //     };
+        // });
+        const { getProgress, updateProgress, advanceTimersToNextTimer, mockRestore } =
+            mockUploadFuncResolve();
 
         const onUploadProgress: IFileManagerProps['onUploadProgress'] = jest.fn();
 
-        const { getByRole, queryAllByRole, findByText, findByTestId, getAllByRole } = render(
-            <Manager viewFile={() => Promise.resolve()} onUploadProgress={onUploadProgress} />
-        );
+        const { getByRole, queryAllByRole, findByText, findByTestId, getAllByRole, getByTitle } =
+            render(
+                <Manager viewFile={() => Promise.resolve()} onUploadProgress={onUploadProgress} />
+            );
 
         await findByText('dragNdrop');
 
@@ -1343,30 +1672,37 @@ describe('FileManager uploading', () => {
             getAllByRole('button')[0].click();
         });
 
+        await waitFor(() => expect(queryAllByRole('progressbar').length).toBe(1));
+        const progress = getProgress();
+
         act(() => {
-            progress({ total: 1024, loaded: 512 });
+            progress[0]({ total: 1024, loaded: 512 });
             jest.advanceTimersByTime(100);
         });
 
         expect(getByRole('progressbar').style.width).toMatch('50%');
         expect(onUploadProgress).toHaveBeenCalledWith(50, 512, 1024);
 
+        advanceTimersToNextTimer();
+
         await waitFor(() => expect(queryAllByRole('menu', { hidden: true }).length).toEqual(1));
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should test uploading progress with multiple files', async () => {
-        const progress: Function[] = [];
+        // const progress: Function[] = [];
 
-        const spy = jest.spyOn(utils, 'submitFormData');
-        spy.mockImplementation((url, formData, opts) => {
-            progress.push(opts.onProgress);
-            return {
-                promise: new Promise((res) => setTimeout(() => res(null))),
-                xhr: { abort: () => {} } as unknown as XMLHttpRequest,
-            };
-        });
+        // const spy = jest.spyOn(utils, 'submitFormData');
+        // spy.mockImplementation((url, formData, opts) => {
+        //     progress.push(opts.onProgress);
+        //     return {
+        //         promise: new Promise((res) => setTimeout(() => res(null))),
+        //         xhr: { abort: () => {} } as unknown as XMLHttpRequest,
+        //     };
+        // });
+        const { getProgress, updateProgress, advanceTimersToNextTimer, mockRestore } =
+            mockUploadFunc();
         mockResponse(2);
 
         const onUploadProgress: IFileManagerProps['onUploadProgress'] = jest.fn();
@@ -1413,6 +1749,10 @@ describe('FileManager uploading', () => {
         //    getAllByRole('button')[1].click();
         // });
 
+        await waitFor(() => expect(queryAllByRole('progressbar').length).toBe(2));
+
+        const progress = getProgress();
+
         act(() => {
             progress[0]({ total: 1024, loaded: 512 });
             jest.advanceTimersByTime(100);
@@ -1423,13 +1763,15 @@ describe('FileManager uploading', () => {
             jest.advanceTimersByTime(100);
         });
 
-        expect(queryAllByRole('progressbar').length).toEqual(2);
+        // expect(queryAllByRole('progressbar').length).toEqual(2);
 
         expect(queryAllByRole('progressbar')[0].style.width).toMatch('50%');
         expect(queryAllByRole('progressbar')[1].style.width).toMatch('25%');
 
         expect(onUploadProgress).toHaveBeenNthCalledWith(1, 25, 512, 2048);
         expect(onUploadProgress).toHaveBeenNthCalledWith(2, 37.5, 768, 2048);
+
+        advanceTimersToNextTimer();
 
         await waitFor(() => expect(queryAllByRole('menu', { hidden: true }).length).toEqual(2));
 
@@ -1440,11 +1782,13 @@ describe('FileManager uploading', () => {
         expect(onUploadProgress).toHaveBeenLastCalledWith(null, 0, 0);
 
         promiseAll.mockRestore();
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should restart upload progress listener when during uploading a new file starts to uploading', async () => {
-        const spy = mockSubmitFormData();
+        // const spy = mockSubmitFormData();
+        const { getProgress, updateProgress, advanceTimersToNextTimer, mockRestore } =
+            mockUploadFunc();
 
         const spyClearInterval = jest.spyOn(window, 'clearInterval');
 
@@ -1459,32 +1803,43 @@ describe('FileManager uploading', () => {
 
         expect(spyClearInterval).not.toHaveBeenCalled();
 
+        // act(() => {
+        //     queryAllByRole('button')[0].click();
+        // });
+
+        // jest.advanceTimersByTime(100);
+
+        // act(() => {
+        //     queryAllByRole('button')[1].click();
+        // });
+
         act(() => {
             queryAllByRole('button')[0].click();
-        });
-
-        jest.advanceTimersByTime(100);
-
-        act(() => {
-            queryAllByRole('button')[1].click();
+            queryAllByRole('button')[2].click();
         });
 
         await waitFor(() => expect(queryAllByRole('progressbar').length).toBe(2));
 
+        advanceTimersToNextTimer();
+
+        await findByText('dragNdrop');
+
         expect(spyClearInterval).toBeCalledTimes(1);
 
         spyClearInterval.mockRestore();
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should stop upload progress listener when component is unmounted', async () => {
-        const promise = new Promise((_, rej) => setTimeout(() => rej({})));
-        promise.catch(() => {});
+        // const promise = new Promise((_, rej) => setTimeout(() => rej({})));
+        // promise.catch(() => {});
 
-        const spy = mockSubmitFormData(
-            promise as Promise<string>,
-            { abort: jest.fn() } as unknown as XMLHttpRequest
-        );
+        // const spy = mockSubmitFormData(
+        //     promise as Promise<string>,
+        //     { abort: jest.fn() } as unknown as XMLHttpRequest
+        // );
+        const { getProgress, updateProgress, advanceTimersToNextTimer, mockRestore } =
+            mockUploadFuncReject();
 
         const spyClearInterval = jest.spyOn(window, 'clearInterval');
 
@@ -1503,22 +1858,23 @@ describe('FileManager uploading', () => {
             queryAllByRole('button')[0].click();
         });
 
-        jest.advanceTimersByTime(100);
+        await waitFor(() => expect(queryAllByRole('progressbar').length).toBe(1));
 
         unmount();
 
-        jest.advanceTimersByTime(100);
+        updateProgress();
 
-        expect(spyClearInterval).toBeCalledTimes(1);
+        await waitFor(() => expect(spyClearInterval).toBeCalledTimes(1));
 
         spyClearInterval.mockRestore();
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should throw an error when checkResult function returns false', async () => {
-        const spy = mockSubmitFormData();
+        // const spy = mockSubmitFormData();
+        const { advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
 
-        const { getByRole, findByText, findByTestId } = render(
+        const { getByRole, findByText, findByTestId, findAllByRole } = render(
             <Manager
                 getUploadParams={() => ({
                     URL: `/api/singleFileUpload`,
@@ -1559,13 +1915,16 @@ describe('FileManager uploading', () => {
                 });
         });
 
+        await findAllByRole('progressbar');
+        advanceTimersToNextTimer();
+
         await waitForElementToBeRemoved(() => getByRole('progressbar'));
 
         expect(getByRole('fileitem')).toHaveClass('display-item-upload-error');
 
         // screen.debug();
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should upload file automatically', async () => {
@@ -1637,120 +1996,21 @@ describe('FileManager uploading (one request upload mode)', () => {
         jest.clearAllTimers();
     });
 
-    test('should check getUploadParams', async () => {
-        const spy = mockSubmitFormData();
-
-        const { formDataFields, restore } = mockFormData();
-
-        const url = '/api/multipleFileUpload';
-        const fileFieldName = 'fileToUpload';
-        const fields = {
-            customField: 'some value',
-        };
-        const headers = {
-            customHeader: 'test',
-        };
-        const method = 'PUT';
-        const timeout = 1000;
-        const body = 'test body';
-
-        let incomingFiles = null;
-
-        const { getByRole, findByText, findByTestId } = render(
-            <Manager
-                uploadFilesInOneRequest
-                getUploadParams={(files) => (
-                    (incomingFiles = files),
-                    {
-                        URL: url,
-                        fileFieldName,
-                        fields,
-                        headers,
-                        method,
-                        timeout,
-                        body,
-                    }
-                )}
-            />
-        );
-
-        await findByText('dragNdrop');
-
-        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
-        fireEvent.change(input, { target: { files: [mockFile()] } });
-
-        await findByTestId('file-container');
-
-        act(() => {
-            managerRef.current.upload();
-        });
-
-        expect(Array.isArray(incomingFiles)).toBe(true);
-
-        await waitFor(() =>
-            expect(spy).toHaveBeenCalledWith(url, body, {
-                headers,
-                method,
-                onProgress: expect.any(Function),
-                timeout,
-            })
-        );
-
-        expect(formDataFields).toEqual({
-            fileToUpload: expect.any(Blob),
-            customField: 'some value',
-        });
-
-        restore();
-        spy.mockRestore();
-    });
-
     test('should upload files and clear the list', async () => {
-        const spy = mockSubmitFormData();
+        // const spy = mockSubmitFormData();
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
 
         const onFilesUploaded: IFileManagerProps['onFilesUploaded'] = jest.fn();
 
-        const { getByRole, getAllByRole, getByTestId, queryAllByRole, findByText, findByTestId } =
-            render(
-                <Manager
-                    uploadFilesInOneRequest
-                    onFilesUploaded={onFilesUploaded}
-                    viewFile={() => Promise.resolve()}
-                />
-            );
-
-        await findByText('dragNdrop');
-
-        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
-        fireEvent.change(input, { target: { files: [mockFile('1.txt'), mockFile('2.txt')] } });
-
-        await findByTestId('file-container');
-        expect(managerRef.current.localFiles.length).toEqual(2);
-        expect(managerRef.current.remoteFiles.length).toEqual(0);
-
-        act(() => {
-            managerRef.current.upload();
-        });
-
-        expect(queryAllByRole('progressbar').length).toEqual(2);
-        expect(queryAllByRole('button').length).toEqual(0);
-        expect(processResponseSimple).toBeCalledTimes(0);
-
-        await waitForElementToBeRemoved(() => getAllByRole('fileitem'));
-
-        expect(processResponseSimple).toBeCalledTimes(1);
-        expect(onFilesUploaded).toHaveBeenCalledWith([expect.any(Object), expect.any(Object)]);
-
-        spy.mockRestore();
-    });
-
-    test('should upload files and show them in the list', async () => {
-        const spy = mockSubmitFormData();
-        processResponseSimple.mockImplementationOnce(() => simpleResponse);
-
-        const onFilesUploaded: IFileManagerProps['onFilesUploaded'] = jest.fn();
-
-        const { getByRole, queryAllByRole, findByText, findByTestId } = render(
+        const {
+            getByRole,
+            getAllByRole,
+            getByTestId,
+            queryAllByRole,
+            findByText,
+            findByTestId,
+            findAllByRole,
+        } = render(
             <Manager
                 uploadFilesInOneRequest
                 onFilesUploaded={onFilesUploaded}
@@ -1771,9 +2031,59 @@ describe('FileManager uploading (one request upload mode)', () => {
             managerRef.current.upload();
         });
 
+        await findAllByRole('progressbar');
+
+        updateProgress();
+
         expect(queryAllByRole('progressbar').length).toEqual(2);
         expect(queryAllByRole('button').length).toEqual(0);
         expect(processResponseSimple).toBeCalledTimes(0);
+
+        advanceTimersToNextTimer();
+
+        await waitForElementToBeRemoved(() => getAllByRole('fileitem'));
+
+        expect(processResponseSimple).toBeCalledTimes(1);
+        expect(onFilesUploaded).toHaveBeenCalledWith([expect.any(Object), expect.any(Object)]);
+
+        mockRestore();
+    });
+
+    test('should upload files and show them in the list', async () => {
+        // const spy = mockSubmitFormData();
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
+        processResponseSimple.mockImplementationOnce(() => simpleResponse);
+
+        const onFilesUploaded: IFileManagerProps['onFilesUploaded'] = jest.fn();
+
+        const { getByRole, queryAllByRole, findByText, findByTestId, findAllByRole } = render(
+            <Manager
+                uploadFilesInOneRequest
+                onFilesUploaded={onFilesUploaded}
+                viewFile={() => Promise.resolve()}
+            />
+        );
+
+        await findByText('dragNdrop');
+
+        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
+        fireEvent.change(input, { target: { files: [mockFile('1.txt'), mockFile('2.txt')] } });
+
+        await findByTestId('file-container');
+        expect(managerRef.current.localFiles.length).toEqual(2);
+        expect(managerRef.current.remoteFiles.length).toEqual(0);
+
+        act(() => {
+            managerRef.current.upload();
+        });
+
+        const progressbar = await findAllByRole('progressbar');
+
+        expect(progressbar.length).toEqual(2);
+        expect(queryAllByRole('button').length).toEqual(0);
+        expect(processResponseSimple).toBeCalledTimes(0);
+
+        advanceTimersToNextTimer();
 
         await waitFor(() => expect(queryAllByRole('menu', { hidden: true }).length).toEqual(2));
 
@@ -1783,7 +2093,7 @@ describe('FileManager uploading (one request upload mode)', () => {
 
         expect(onFilesUploaded).toHaveBeenCalledWith([expect.any(Object), expect.any(Object)]);
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should abort uploading files', async () => {
@@ -1792,14 +2102,25 @@ describe('FileManager uploading (one request upload mode)', () => {
 
         const retObj = { status: 0, message: 'The file upload was aborted', type: 'abort' };
         const promise = new Promise((_, rej) => setTimeout(() => rej(retObj)));
-        promise.catch(() => {});
+        promise.catch(() => undefined);
 
-        const spy = mockSubmitFormData(
-            promise as Promise<string>,
-            { abort } as unknown as XMLHttpRequest
-        );
+        // const spy = mockSubmitFormData(
+        //     promise as Promise<string>,
+        //     { abort } as unknown as XMLHttpRequest
+        // );
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFuncReject({
+            abort,
+        } as unknown as XMLHttpRequest);
 
-        const { getByRole, getByTestId, queryAllByRole, findByText, findByTestId } = render(
+        const {
+            getByRole,
+            getByTestId,
+            queryAllByRole,
+            findByText,
+            findByTestId,
+            queryAllByTestId,
+            findAllByTestId,
+        } = render(
             <Manager
                 uploadFilesInOneRequest
                 onUploadProgress={onUploadProgress}
@@ -1820,31 +2141,40 @@ describe('FileManager uploading (one request upload mode)', () => {
             managerRef.current.upload();
         });
 
+        const stubs = await findAllByTestId('loading-icon-stub');
+        expect(stubs.length).toBe(2);
+
         act(() => {
             managerRef.current.cancelUpload();
         });
 
+        advanceTimersToNextTimer();
+
         await waitFor(() => expect(queryAllByRole('button').length).toEqual(2));
+
         expect(abort).toBeCalledTimes(1);
         expect(errorId).toEqual('upload_aborted');
         expect(managerRef.current.localFiles.length).toEqual(2);
         expect(managerRef.current.remoteFiles.length).toEqual(0);
         expect(onUploadProgress).toHaveBeenCalledWith(null, 0, 0);
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should abort file uploading when component was unmounted', async () => {
         const abort = jest.fn();
 
-        const retObj = { status: 0, message: 'The file upload was aborted', type: 'abort' };
-        const promise = new Promise((_, rej) => setTimeout(() => rej(retObj)));
-        promise.catch(() => {});
+        // const retObj = { status: 0, message: 'The file upload was aborted', type: 'abort' };
+        // const promise = new Promise((_, rej) => setTimeout(() => rej(retObj)));
+        // promise.catch(() => {});
 
-        const spy = mockSubmitFormData(
-            promise as Promise<string>,
-            { abort } as unknown as XMLHttpRequest
-        );
+        // const spy = mockSubmitFormData(
+        //     promise as Promise<string>,
+        //     { abort } as unknown as XMLHttpRequest
+        // );
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFuncReject({
+            abort,
+        } as unknown as XMLHttpRequest);
 
         const onUnmountComponent = jest.fn();
 
@@ -1863,16 +2193,21 @@ describe('FileManager uploading (one request upload mode)', () => {
             managerRef.current.upload();
         });
 
+        await findByTestId('loading-icon-stub');
+
         unmount();
+
+        advanceTimersToNextTimer();
 
         expect(abort).toBeCalledTimes(1);
         expect(onUnmountComponent).toBeCalledTimes(1);
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should skip uploading when there are no files or uploading has already started', async () => {
-        const spy = mockSubmitFormData();
+        // const spy = mockSubmitFormData();
+        const { advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
         mockResponse(1);
 
         const { getByRole, queryAllByRole, findByText, findByTestId } = render(
@@ -1927,22 +2262,27 @@ describe('FileManager uploading (one request upload mode)', () => {
                 });
         });
 
+        await findByTestId('loading-icon-stub');
+
+        advanceTimersToNextTimer();
+
         await waitFor(() => queryAllByRole('menu', { hidden: true }));
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should test uploading progress', async () => {
-        let progress: Function = null;
+        // let progress: Function = null;
 
-        const spy = jest.spyOn(utils, 'submitFormData');
-        spy.mockImplementation((url, formData, opts) => {
-            progress = opts.onProgress;
-            return {
-                promise: new Promise((res) => setTimeout(() => res(null))),
-                xhr: { abort: () => {} } as unknown as XMLHttpRequest,
-            };
-        });
+        // const spy = jest.spyOn(utils, 'submitFormData');
+        // spy.mockImplementation((url, formData, opts) => {
+        //     progress = opts.onProgress;
+        //     return {
+        //         promise: new Promise((res) => setTimeout(() => res(null))),
+        //         xhr: { abort: () => {} } as unknown as XMLHttpRequest,
+        //     };
+        // });
+        const mock1 = mockUploadFunc();
 
         processResponseSimple
             .mockImplementationOnce(() => simpleResponse)
@@ -1950,14 +2290,21 @@ describe('FileManager uploading (one request upload mode)', () => {
 
         const onUploadProgress: IFileManagerProps['onUploadProgress'] = jest.fn();
 
-        const { rerender, getByRole, queryAllByRole, findByText, findByTestId, getAllByRole } =
-            render(
-                <Manager
-                    uploadFilesInOneRequest
-                    onUploadProgress={onUploadProgress}
-                    viewFile={() => Promise.resolve()}
-                />
-            );
+        const {
+            rerender,
+            getByRole,
+            queryAllByRole,
+            findByText,
+            findByTestId,
+            getAllByRole,
+            findAllByTestId,
+        } = render(
+            <Manager
+                uploadFilesInOneRequest
+                onUploadProgress={onUploadProgress}
+                viewFile={() => Promise.resolve()}
+            />
+        );
 
         await findByText('dragNdrop');
 
@@ -1970,19 +2317,28 @@ describe('FileManager uploading (one request upload mode)', () => {
             managerRef.current.upload();
         });
 
+        await findAllByTestId('loading-icon-stub');
+
+        const progress = mock1.getProgress();
+
         act(() => {
-            progress({ total: 1024, loaded: 512 });
+            progress[0]({ total: 1024, loaded: 512 });
             jest.advanceTimersByTime(100);
         });
 
         expect(queryAllByRole('progressbar').length).toEqual(0);
         expect(onUploadProgress).toHaveBeenCalledWith(50, 512, 1024);
 
+        mock1.advanceTimersToNextTimer();
+
         await waitFor(() => expect(queryAllByRole('menu', { hidden: true }).length).toEqual(2));
 
         expect(onUploadProgress).toHaveBeenCalledWith(null, 0, 0);
 
-        // should render file items with progress bar
+        mock1.mockRestore();
+
+        // render file items with progress bar
+        const mock2 = mockUploadFunc();
         rerender(<Manager uploadFilesInOneRequest viewFile={() => Promise.resolve()} />);
 
         fireEvent.change(input, { target: { files: [mockFile('3.txt'), mockFile('4.txt')] } });
@@ -1993,21 +2349,26 @@ describe('FileManager uploading (one request upload mode)', () => {
             managerRef.current.upload();
         });
 
+        await findAllByTestId('loading-icon-stub');
+
         act(() => {
-            progress({ total: 1024, loaded: 512 });
+            progress[0]({ total: 1024, loaded: 512 });
             jest.advanceTimersByTime(100);
         });
 
         expect(queryAllByRole('progressbar').length).toEqual(2);
         expect(onUploadProgress).toHaveBeenCalledWith(50, 512, 1024);
 
+        mock2.advanceTimersToNextTimer();
+
         await waitFor(() => expect(queryAllByRole('menu', { hidden: true }).length).toEqual(4));
 
-        spy.mockRestore();
+        mock2.mockRestore();
     });
 
     test('should throw an error when checkResult function returns false', async () => {
-        const spy = mockSubmitFormData();
+        // const spy = mockSubmitFormData();
+        const { advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
 
         const { getByRole, findByText, findByTestId } = render(
             <Manager
@@ -2049,11 +2410,15 @@ describe('FileManager uploading (one request upload mode)', () => {
                 });
         });
 
+        await findByTestId('loading-icon-stub');
+
+        advanceTimersToNextTimer();
+
         await waitForElementToBeRemoved(() => getByRole('progressbar'));
 
         expect(getByRole('fileitem')).toHaveClass('display-item-upload-error');
 
-        spy.mockRestore();
+        mockRestore();
     });
 
     test('should upload file automatically', async () => {
@@ -2540,7 +2905,7 @@ describe('FileManager basic tests', () => {
         await waitFor(() => expect(getAllByRole('fileitem').length).toEqual(3));
 
         // view
-        let spy = jest.spyOn(utils, 'openBlob').mockImplementation(() => {});
+        let spy = jest.spyOn(utils, 'openBlob').mockImplementation(() => undefined);
 
         clickOnFileItem(0);
         await waitFor(() => expect(queryAllByRole('menu').length).toEqual(0));
@@ -2912,10 +3277,7 @@ describe('FileManager exposed functions & props', () => {
     test('should test addLocalFiles (add single file)', async () => {
         mockFetch(true, 200, []);
 
-
-        const { getByTitle, queryAllByRole, findByText } = render(
-            <Manager />
-        );
+        const { getByTitle, queryAllByRole, findByText } = render(<Manager />);
 
         await findByText('dragNdrop');
 
@@ -2927,19 +3289,16 @@ describe('FileManager exposed functions & props', () => {
         expect(getByTitle('1.txt')).toBeInTheDocument();
     });
 
-
     test('should test addLocalFiles (add FileList)', async () => {
         mockFetch(true, 200, []);
 
         const { create, restore } = mockFileList();
 
-        const { getByTitle, queryAllByRole, findByText } = render(
-            <Manager />
-        );
+        const { getByTitle, queryAllByRole, findByText } = render(<Manager />);
 
         await findByText('dragNdrop');
 
-        const fileList = create(mockFile('1.txt'), mockFile('2.txt'))
+        const fileList = create(mockFile('1.txt'), mockFile('2.txt'));
 
         act(() => {
             managerRef.current.addLocalFiles(fileList);
@@ -2952,17 +3311,14 @@ describe('FileManager exposed functions & props', () => {
         restore();
     });
 
-
     test('addLocalFiles should ignore adding an object that is not a file', async () => {
         mockFetch(true, 200, []);
 
-        const { queryAllByRole, findByText } = render(
-            <Manager />
-        );
+        const { queryAllByRole, findByText } = render(<Manager />);
 
         await findByText('dragNdrop');
 
-        const files = [mockFile('1.txt'), { name: 'fakeFile', size: 1024 }] as File[]
+        const files = [mockFile('1.txt'), { name: 'fakeFile', size: 1024 }] as File[];
 
         act(() => {
             managerRef.current.addLocalFiles(files);
@@ -2970,7 +3326,6 @@ describe('FileManager exposed functions & props', () => {
 
         await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(1));
     });
-
 
     test('should test removeAllLocalFiles', async () => {
         mockFetch(true, 200, simpleResponse);

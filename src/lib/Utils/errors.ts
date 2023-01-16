@@ -4,6 +4,8 @@ export const errorTxtUploadedFilesNotArray =
     'The "fetchRemoteFiles" function must return a promise that resolves with an array of items with type "IFileData" or an empty array';
 export const errorTxtUploadedFileFailedValidation = `Response failed validation in the 'checkResult' function`;
 export const errorTxtInvalidFileFields = `File must be an object with required fields [fileName, fileSize]. Use the 'fileFieldMapping' property to set the mapping function`;
+export const errorTxtWrongUploadParams =
+    'Wrong upload parameters. Make sure the "getUploadParams" function is correct';
 
 //--------------------------------- TYPES --------------------------------------
 

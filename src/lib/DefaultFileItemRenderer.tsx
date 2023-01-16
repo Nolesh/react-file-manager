@@ -260,7 +260,7 @@ const DefaultFileItemRenderer = ({
             ? fileData.fileName.split('.').pop().toUpperCase()
             : '?');
 
-    const progress = (fileData.uploadedSize / fileData.totalSize) * 100;
+    const progress = ((fileData.uploadedSize || 0) / (fileData.totalSize || 1)) * 100;
 
     const disabledOrReadonly = disabled || fileData.disabled || readOnly || fileData.readOnly;
 
@@ -361,7 +361,13 @@ const DefaultFileItemRenderer = ({
                         props: { title: titles.undoDescription, className: 'icon-button-neg' },
                         children: <ClearIcon />,
                     },
-                    stub: <LoadingIcon className="loading-icon" viewBox="0 0 24 24" />,
+                    stub: (
+                        <LoadingIcon
+                            data-testid="loading-icon-stub"
+                            className="loading-icon"
+                            viewBox="0 0 24 24"
+                        />
+                    ),
                 },
                 overrides?.buttons?.({
                     fileData,

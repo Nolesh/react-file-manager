@@ -364,7 +364,7 @@ This property allows the user to override the appearance and text of all compone
 All object keys are independent and optional. Using this property, the user can redefine almost any part of the `File Manager`. For more information, see examples ([Custom UI](https://github.com/Nolesh/react-file-manager/demo/CustomUI), [Overridden UI](https://github.com/Nolesh/react-file-manager/demo/OverriddenUI)).
 
 ### `getUploadParams`
-This function should return an object with the parameters required to upload files:
+This function should return an object or promise with the parameters required to upload files:
 
 ```tsx
 (localFileData: ILocalFileData | ILocalFileData[]) => ({
@@ -426,6 +426,17 @@ There are some aspects to consider when using `getUploadParams`:
     ```tsx
     body: localFileData.file,
     method: 'PUT',
+    ```
+- It is also possible to pass a promise to the `getUploadParams` function if you want to perform preliminary actions, such as asynchronously obtaining an access token:
+    ```tsx
+    getUploadParams={async (localFileData) => {                            
+        return {
+            URL: '/api/uploadFile',
+            headers: {
+                Authorization: await getAccessToken()
+            }
+        }
+    }}   
     ```
 
 ### `fetchRemoteFiles`

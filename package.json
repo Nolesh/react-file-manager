@@ -50,6 +50,7 @@
         "stylelint": "stylelint ./src/**/*.{scss,css} ./demo/**/*.{scss,css} --quiet",
         "stylelint-fix": "stylelint ./src/**/*.{scss,css} ./demo/**/*.{scss,css} --fix",
         "lint": "npm run eslint & npm run stylelint",
+        "lint:staged": "npx lint-staged",
         "clean": "if exist dist rmdir /s /q dist",
         "prepare": "husky install",
         "server": "nodemon server/index.js",
@@ -124,8 +125,7 @@
         "typescript": "4.3.5",
         "webpack": "^5.38.1",
         "webpack-cli": "^4.7.0",
-        "webpack-dev-server": "^3.11.0",
-        "worker-loader": "^3.0.8"
+        "webpack-dev-server": "^3.11.0"
     },
     "dependencies": {
         "prop-types": "^15.7.2"

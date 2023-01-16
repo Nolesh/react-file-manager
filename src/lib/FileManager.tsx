@@ -55,6 +55,7 @@ import {
     errorTxtUploadedFilesNotArray,
     errorTxtUploadedFileFailedValidation,
     errorTxtInvalidFileFields,
+    errorTxtWrongUploadParams,
     TErrorCodes,
     TInternalError,
     TCustomError,
@@ -72,7 +73,7 @@ type TUploadError = {
     errorId?: TErrorCodes;
 };
 
-export type TGetUploadParams = (localFileData: ILocalFileData | ILocalFileData[]) => {
+type TUploadParams = {
     URL: string;
     fileFieldName?: string;
     fields?: { [name: string]: string | Blob };
@@ -84,6 +85,10 @@ export type TGetUploadParams = (localFileData: ILocalFileData | ILocalFileData[]
     processResponse?: (response: any) => any;
     processError?: (error: any) => string;
 };
+
+export type TGetUploadParams = (
+    localFileData: ILocalFileData | ILocalFileData[]
+) => TUploadParams | Promise<TUploadParams>;
 
 export interface IFileManagerRef {
     openFileDialog: () => void;
@@ -340,7 +345,7 @@ const FileManager = forwardRef(
         const setIsLoading = (state: boolean) => dispatch({ type: 'setIsLoading', result: state });
         const setIsUploading = (state: boolean) =>
             dispatch({ type: 'setIsUploading', result: state });
-        const forceUpdate = () => dispatch({ type: 'forceUpdate' });
+        const forceUpdate = () => dataRef.current.isMounted && dispatch({ type: 'forceUpdate' });
         const setLocalFiles = (files: ILocalFileData[]) =>
             dispatch({ type: 'setLocalFiles', result: files });
         const setRemoteFiles = (
@@ -547,15 +552,31 @@ const FileManager = forwardRef(
             }, 100);
         };
 
-        const uploadSingleFile = <T extends boolean>(
+        const obtainUploadParams = async (fileData: ILocalFileData | ILocalFileData[]) => {
+            const uploadParams =
+                (!!getUploadParams && (await getUploadParams(fileData))) ?? ({} as TUploadParams);
+            const { URL } = uploadParams;
+
+            if (!URL) {
+                setIsUploading(false);
+                throw Error(errorTxtWrongUploadParams);
+            }
+            return uploadParams;
+        };
+
+        const uploadSingleFile = async (fileData: ILocalFileData) => {
+            setIsUploading(true);
+            const uploadParams = await obtainUploadParams(fileData);
+            return createSingleFileUploadPromise(fileData, uploadParams, true);
+        };
+
+        const createSingleFileUploadPromise = <T extends boolean>(
             fileData: ILocalFileData,
+            uploadParams: TUploadParams,
             standalone: T,
             files: ILocalFileData[] = localFiles
         ): T extends true ? void : Promise<unknown> => {
-            if (standalone) {
-                if (fileData.state === 'uploading') return null;
-                setIsUploading(true);
-            }
+            if (standalone && fileData.state === 'uploading') return null;
 
             const uploadItem = dataRef.current.uploadingFiles.find(
                 (item) => item.fileData === fileData
@@ -573,7 +594,7 @@ const FileManager = forwardRef(
                 processResponse,
                 checkResult,
                 processError,
-            } = getUploadParams(fileData);
+            } = uploadParams;
 
             uploadProgressData.current.requests++;
 
@@ -745,10 +766,11 @@ const FileManager = forwardRef(
 
             const uploadPromises = [];
             const uploadingFiles: ILocalFileData[] = [];
+            const uploadParams = await obtainUploadParams(files);
 
             for (const fileData of files) {
                 if (!['initial', 'uploadError'].includes(fileData.state)) continue;
-                const promise = uploadSingleFile(fileData, false, files);
+                const promise = createSingleFileUploadPromise(fileData, uploadParams, false, files);
                 uploadPromises.push(promise);
                 uploadingFiles.push(fileData);
             }
@@ -776,10 +798,11 @@ const FileManager = forwardRef(
             return Promise.resolve(result);
         };
 
-        const uploadFilesInOneRequest = (files: ILocalFileData[]) => {
+        const uploadFilesInOneRequest = async (files: ILocalFileData[]) => {
             if (!files.length || isUploading) return Promise.resolve();
 
             setIsUploading(true);
+
             const {
                 URL,
                 method,
@@ -791,7 +814,7 @@ const FileManager = forwardRef(
                 processResponse,
                 checkResult,
                 processError,
-            } = getUploadParams(files);
+            } = await obtainUploadParams(files);
 
             const formData = new FormData();
             for (const fileData of files) {
@@ -1087,8 +1110,7 @@ const FileManager = forwardRef(
                 fileItems.push({
                     fileData,
                     uploadFile:
-                        (!uploadInOneRequest && ((fileData) => uploadSingleFile(fileData, true))) ||
-                        null,
+                        (!uploadInOneRequest && ((fileData) => uploadSingleFile(fileData))) || null,
                     deleteFile: (fileData.state !== 'uploading' && deleteLocalFile) || null,
                     updateFileData: (addFileDescription && updateLocalFileData) || null,
                     showProgress:
