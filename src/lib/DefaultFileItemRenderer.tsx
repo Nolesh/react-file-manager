@@ -1,4 +1,4 @@
-import React, { ReactElement, useMemo } from 'react';
+import React, { ReactElement, useEffect, useMemo } from 'react';
 
 import {
     Button,
@@ -7,12 +7,10 @@ import {
     AudioThumbnail,
     IMenuItem,
     ImageLazyLoader,
+    IAudioThumbnailProps,
 } from './Components';
 
 import {
-    TActionMenu,
-    TButtons,
-    TFileName,
     ILocalFileData,
     IFileItemComponentProps,
     IOverriddenFileItem,
@@ -45,6 +43,15 @@ interface IFileActions {
     changeDescriptionMode: () => void;
     displayIcons: boolean;
     itemNames: TMenuItemNames;
+}
+
+interface IThumbnailStyles {
+    container?: React.CSSProperties;
+    type?: React.CSSProperties;
+    loading?: React.CSSProperties;
+    audio?: Omit<IAudioThumbnailProps['styles'], 'type'>;
+    image?: React.CSSProperties;
+    default?: React.CSSProperties;
 }
 
 // -----------------------------------------------------------------------------
@@ -106,8 +113,8 @@ export const fileActions = ({
 const getRootStyles = <T extends IOverriddenFileItem['rootStyles']>(
     overrides: T,
     fileData: ILocalFileData,
-    disabled: boolean,
-    isLocalFile: boolean
+    disabled: boolean
+    // isLocalFile: boolean
 ) => {
     const getOverriddenStyle = (overrides: T, field: 'className' | 'style') =>
         Object.entries(overrides || {})
@@ -139,18 +146,18 @@ const getRootStyles = <T extends IOverriddenFileItem['rootStyles']>(
     });
 
     if ((disabled || fileData.disabled) && fileData.state !== 'uploading') {
-        if (['uploaded', 'deletionError'].includes(fileData.state))
-            return extStyles(rootStyle, classNames, styles, 'uploadedDisabled');
-        else return extStyles(rootStyle, classNames, styles, 'localDisabled');
-    } else if (!isLocalFile && fileData.editMode)
-        return extStyles(rootStyle, classNames, styles, 'editMode');
-    else if (fileData.state === 'deletionError')
+        return ['uploaded', 'deletionError'].includes(fileData.state)
+            ? extStyles(rootStyle, classNames, styles, 'uploadedDisabled')
+            : extStyles(rootStyle, classNames, styles, 'localDisabled');
+    } else if (fileData.state === 'deletionError')
         return extStyles(rootStyle, classNames, styles, 'deletionError');
     else if (fileData.state === 'uploadError')
         return extStyles(rootStyle, classNames, styles, 'uploadError');
-    else if (fileData.state === 'uploaded')
-        return extStyles(rootStyle, classNames, styles, 'uploaded');
-    else if (fileData.state === 'uploading')
+    else if (fileData.state === 'uploaded') {
+        return fileData.editMode
+            ? extStyles(rootStyle, classNames, styles, 'editMode')
+            : extStyles(rootStyle, classNames, styles, 'uploaded');
+    } else if (fileData.state === 'uploading')
         return extStyles(rootStyle, classNames, styles, 'uploading');
     else return extStyles(rootStyle, classNames, styles, 'local');
 };
@@ -161,19 +168,23 @@ const getThumbnail = (
     disabled: boolean,
     type: string,
     root: HTMLDivElement,
-    overrides?: IOverriddenFileItem['thumbnail']
+    overrides?: ReturnType<IOverriddenFileItem['thumbnailFieldStyles']>,
+    component?: IOverriddenFileItem['thumbnailFieldComponent']
 ) =>
-    overrides ? (
-        overrides({ fileData, readOnly, disabled })
+    component ? (
+        component({ fileData, readOnly, disabled })
     ) : (
-        <div role="thumbnail" className={`type-wrapper`}>
+        <div role="thumbnail" className={`type-wrapper`} style={overrides?.container}>
             {fileData.file?.type && fileData.previewData && !fileData.previewData.src ? (
                 <>
-                    <div className="type-img">{type}</div>
+                    <div className="type-img" style={overrides?.type}>
+                        {type}
+                    </div>
                     <LoadingIcon
                         data-testid="loading-icon"
                         className="image-loading-icon"
                         viewBox="0 0 24 24"
+                        style={overrides?.loading}
                     />
                 </>
             ) : (fileData.file?.type?.startsWith('audio/') ||
@@ -185,6 +196,11 @@ const getThumbnail = (
                     duration={fileData.previewData.duration}
                     type={type}
                     root={root}
+                    styles={{
+                        type: overrides?.type,
+                        duration: overrides?.duration,
+                        ...overrides?.audio,
+                    }}
                 />
             ) : (
                 (!!fileData?.previewData?.src &&
@@ -196,6 +212,7 @@ const getThumbnail = (
                                         <LoadingIcon
                                             className="image-loading-icon"
                                             viewBox="0 0 24 24"
+                                            style={overrides?.loading}
                                         />
                                     }
                                     styles={{
@@ -210,26 +227,47 @@ const getThumbnail = (
                                         threshold: 0,
                                     }}
                                 >
-                                    <img src={fileData.previewData.src} />
+                                    <img src={fileData.previewData.src} style={overrides?.image} />
                                 </ImageLazyLoader>
                             }
-                            <div className="type-img">{type}</div>
+                            <div className="type-img" style={overrides?.type}>
+                                {type}
+                            </div>
                             {fileData.previewData.duration && (
-                                <div className="duration">
+                                <div className="duration" style={overrides?.duration}>
                                     {formatDuration(fileData.previewData.duration)}
                                 </div>
                             )}
                         </div>
-                    )) || <div className="type">{type}</div>
+                    )) || (
+                    <div className="type" style={overrides?.default}>
+                        {type}
+                    </div>
+                )
             )}
         </div>
     );
+
+const fileDataKeys: (keyof ILocalFileData)[] = [
+    'uid',
+    'file',
+    'description',
+    'disabled',
+    'editMode',
+    'elementRef',
+    'fileName',
+    'fileSize',
+    'fileType',
+    'previewData',
+    'readOnly',
+    'state',
+];
 
 // -----------------------------------------------------------------------------
 
 const DefaultFileItemRenderer = ({
     fileData,
-    getTextFieldProps,
+    getInputFieldProps,
     getItemProps,
     getCommonProps,
     getActions,
@@ -269,10 +307,16 @@ const DefaultFileItemRenderer = ({
 
     const tabIndex = noKeyboard ? -1 : 0;
 
-    const titles: TTitles = {
-        ...defaultTitles,
-        ...overrides?.titles,
-    };
+    const fileDataDeps = fileDataKeys.map((x) => fileData[x]);
+    const commonDeps = [readOnly, disabled, ...fileDataDeps];
+
+    const titles: TTitles = useMemo(
+        () => ({
+            ...defaultTitles,
+            ...overrides?.titles,
+        }),
+        [overrides?.titles]
+    );
 
     const rootStyle = useMemo(() => {
         const overriddenRoot = insertIntoObject(
@@ -280,34 +324,114 @@ const DefaultFileItemRenderer = ({
             { opacity: isDragActive ? 0.5 : 1 },
             'base.style'
         );
-        return getRootStyles(overriddenRoot, fileData, disabled, isLocalFile);
-    }, [overrides?.rootStyles, isDragActive, disabled, { ...fileData }]);
+        return getRootStyles(overriddenRoot, fileData, disabled);
+    }, [overrides?.rootStyles, isDragActive, ...commonDeps]);
 
     const thumbnail = useMemo(
-        () => getThumbnail(fileData, readOnly, disabled, type, root, overrides?.thumbnail),
-        [overrides?.thumbnail, root, type, readOnly, disabled, { ...fileData }]
-    );
-
-    const fileNameStyles: ReturnType<TFileName> = useMemo(
         () =>
-            overrides?.fileName?.({
+            getThumbnail(
                 fileData,
                 readOnly,
                 disabled,
-            }),
-        [overrides?.fileName, readOnly, disabled, { ...fileData }]
+                type,
+                root,
+                overrides?.thumbnailFieldStyles?.({ fileData, readOnly, disabled }),
+                overrides?.thumbnailFieldComponent
+            ),
+        [
+            overrides?.thumbnailFieldStyles,
+            overrides?.thumbnailFieldComponent,
+            root,
+            type,
+            ...commonDeps,
+        ]
     );
 
-    const actionMenuProps: ReturnType<TActionMenu> = useMemo(
-        () => ({
+    const inputComponent = useMemo(() => {
+        const customComponent =
+            overrides?.inputFieldComponent?.({
+                fileData,
+                readOnly,
+                disabled,
+                changeDescription,
+                changeDescriptionMode,
+                confirmDescriptionChanges,
+                undoDescriptionChanges,
+                getInputFieldProps,
+            }) ?? null;
+        if (customComponent) return customComponent;
+
+        // or return default implementation
+        const fileNameStyles = overrides?.inputFieldStyles?.({
+            fileData,
+            readOnly,
+            disabled,
+        });
+        return (
+            <>
+                {disabledOrReadonly ||
+                (['uploaded', 'uploading', 'deletionError'].includes(fileData.state) &&
+                    !fileData.editMode) ||
+                !!!changeDescription ? (
+                    <div
+                        {...fileNameStyles?.readOnlyText}
+                        title={fileData.fileName}
+                        data-testid="read-only-text"
+                    >
+                        {fileData.description || fileData.fileName}
+                    </div>
+                ) : (
+                    <TextField
+                        {...getInputFieldProps()}
+                        {...fileNameStyles?.textField}
+                        tabIndex={tabIndex}
+                    />
+                )}
+            </>
+        );
+    }, [
+        overrides?.inputFieldComponent,
+        overrides?.inputFieldStyles,
+        getInputFieldProps,
+        getActions,
+        ...commonDeps,
+    ]);
+
+    const fileSize = useMemo(
+        () =>
+            overrides?.sizeFieldComponent?.({
+                fileData,
+                readOnly,
+                disabled,
+                formatSize,
+            }) ?? (
+                <div
+                    role="filesize"
+                    {...overrides?.sizeFieldStyle?.({ fileData, readOnly, disabled })}
+                >
+                    {formatSize(fileData.fileSize)}
+                </div>
+            ),
+        [overrides?.sizeFieldComponent, overrides?.sizeFieldStyle, formatSize, ...commonDeps]
+    );
+
+    // Control
+    const control = useMemo(() => {
+        const customControl = overrides?.controlField?.component?.({
+            fileData,
+            readOnly,
+            disabled,
+            noKeyboard,
+            ...{ ...getActions() },
+        });
+        if (!!customControl) return customControl;
+
+        // or return default implementation
+        const actionMenuProps = {
             buttonChildren: <MoreVertIcon />,
-            ...overrides?.actionMenu?.({ fileData, readOnly, disabled }),
-        }),
-        [overrides?.actionMenu, readOnly, disabled, { ...fileData }]
-    );
-
-    const actionMenu = useMemo(
-        () => (
+            ...overrides?.controlField?.menu?.({ fileData, readOnly, disabled }),
+        };
+        const actionMenu = (
             <ActionMenu
                 key={`actionMenu-${fileData.uid}`}
                 id={fileData.uid}
@@ -333,14 +457,11 @@ const DefaultFileItemRenderer = ({
                 menuItemStyle={{ ...actionMenuProps?.menuItemStyle }}
                 disabled={disabled || fileData.disabled}
             />
-        ),
-        [disabled, tabIndex, titles, { ...actionMenuProps }, { ...fileData }, { ...getActions() }]
-    );
+        );
 
-    const buttonsProps: ReturnType<TButtons> = useMemo(() => {
         const getIconStyle = (fill?: string) =>
             disabledOrReadonly ? { fill: '#aaa' } : fill ? { fill } : {};
-        return mergeObjects(
+        const buttonsProps = mergeObjects(
             {
                 uploadFile: {
                     props: { title: titles.uploadFile, className: 'icon-button-pos' },
@@ -365,7 +486,7 @@ const DefaultFileItemRenderer = ({
                     props: { title: titles.undoDescription, className: 'icon-button-neg' },
                     children: <ClearIcon style={getIconStyle()} />,
                 },
-                stub: (
+                loadingIcon: (
                     <LoadingIcon
                         data-testid="loading-icon-stub"
                         className="loading-icon"
@@ -373,19 +494,90 @@ const DefaultFileItemRenderer = ({
                     />
                 ),
             },
-            overrides?.buttons?.({
+            overrides?.controlField?.buttons?.({
                 fileData,
                 readOnly,
                 disabled,
-                uploadFilesInOneRequestMode: !!uploadFile,
             })
         );
-    }, [overrides?.buttons, disabledOrReadonly, uploadFile, { ...fileData }, { ...titles }]);
+
+        return (
+            <div role="control">
+                {!['uploaded', 'uploading', 'deletionError'].includes(fileData.state) && (
+                    <>
+                        {uploadFile && (
+                            <Button
+                                {...buttonsProps.uploadFile.props}
+                                tabIndex={tabIndex}
+                                disabled={disabledOrReadonly}
+                                onClick={() => uploadFile(fileData)}
+                            >
+                                {buttonsProps.uploadFile.children}
+                            </Button>
+                        )}
+                        <Button
+                            {...buttonsProps.removeLocalFile.props}
+                            tabIndex={tabIndex}
+                            disabled={!deleteFile || disabledOrReadonly}
+                            onClick={deleteFile && deleteFile.bind(null, fileData)}
+                        >
+                            {buttonsProps.removeLocalFile.children}
+                        </Button>
+                    </>
+                )}
+                {fileData.state === 'uploading' && fileData.cancelUpload && (
+                    <Button
+                        {...buttonsProps.cancelUpload.props}
+                        tabIndex={tabIndex}
+                        onClick={fileData.cancelUpload}
+                    >
+                        {buttonsProps.cancelUpload.children}
+                    </Button>
+                )}
+                {fileData.state === 'uploading' &&
+                    !fileData.cancelUpload &&
+                    buttonsProps.loadingIcon}
+                {['uploaded', 'deletionError'].includes(fileData.state) &&
+                    !fileData.editMode &&
+                    actionMenu}
+                {['uploaded', 'deletionError'].includes(fileData.state) && fileData.editMode && (
+                    <>
+                        <Button
+                            {...buttonsProps.confirmDescription.props}
+                            tabIndex={tabIndex}
+                            disabled={disabledOrReadonly}
+                            onClick={confirmDescriptionChanges}
+                        >
+                            {buttonsProps.confirmDescription.children}
+                        </Button>
+                        <Button
+                            {...buttonsProps.undoDescription.props}
+                            tabIndex={tabIndex}
+                            disabled={disabledOrReadonly}
+                            onClick={undoDescriptionChanges}
+                        >
+                            {buttonsProps.undoDescription.children}
+                        </Button>
+                    </>
+                )}
+            </div>
+        );
+    }, [
+        overrides?.controlField?.component,
+        overrides?.controlField?.menu,
+        overrides?.controlField?.buttons,
+        titles,
+        disabledOrReadonly,
+        tabIndex,
+        fileData.cancelUpload,
+        getActions,
+        ...commonDeps,
+    ]);
 
     const progressBar = useMemo(
         () =>
             showProgress
-                ? overrides?.progressBar?.(progress) ?? (
+                ? overrides?.progressBarComponent?.(progress) ?? (
                       <span
                           role="progressbar"
                           className={`progress`}
@@ -393,136 +585,31 @@ const DefaultFileItemRenderer = ({
                       ></span>
                   )
                 : null,
-        [overrides?.progressBar, showProgress, progress]
+        [overrides?.progressBarComponent, showProgress, progress]
     );
 
     const readOnlyLabel = useMemo(
         () =>
-            overrides?.readOnlyLabel?.() ?? (
+            overrides?.readOnlyIconComponent?.() ?? (
                 <div className="read-only-label" data-testid="read-only-label" title="Read-only">
                     <LockIcon />
                 </div>
             ),
-        [overrides?.readOnlyLabel]
+        [overrides?.readOnlyIconComponent]
     );
 
-    // Default render function
-    const compositeComponent = useMemo(
-        () => (
-            <div {...getItemProps()} {...rootStyle}>
-                {fileData.readOnly && readOnlyLabel}
-                {progressBar}
-                <div className="grid">
-                    {thumbnail}
-                    <>
-                        {disabledOrReadonly ||
-                        (['uploaded', 'uploading', 'deletionError'].includes(fileData.state) &&
-                            !fileData.editMode) ||
-                        !!!changeDescription ? (
-                            <div
-                                {...fileNameStyles?.readOnlyText}
-                                title={fileData.fileName}
-                                data-testid="read-only-text"
-                            >
-                                {fileData.description || fileData.fileName}
-                            </div>
-                        ) : (
-                            <TextField
-                                {...getTextFieldProps()}
-                                {...fileNameStyles?.textField}
-                                tabIndex={tabIndex}
-                            />
-                        )}
-                    </>
-                    <div
-                        role="filesize"
-                        {...overrides?.fileSize?.({ fileData, readOnly, disabled })}
-                    >
-                        {formatSize(fileData.fileSize)}
-                    </div>
-                    <div role="control">
-                        {!['uploaded', 'uploading', 'deletionError'].includes(fileData.state) && (
-                            <>
-                                {uploadFile && (
-                                    <Button
-                                        {...buttonsProps.uploadFile.props}
-                                        tabIndex={tabIndex}
-                                        disabled={disabledOrReadonly}
-                                        onClick={() => uploadFile(fileData)}
-                                    >
-                                        {buttonsProps.uploadFile.children}
-                                    </Button>
-                                )}
-                                <Button
-                                    {...buttonsProps.removeLocalFile.props}
-                                    tabIndex={tabIndex}
-                                    disabled={!deleteFile || disabledOrReadonly}
-                                    onClick={deleteFile && deleteFile.bind(null, fileData)}
-                                >
-                                    {buttonsProps.removeLocalFile.children}
-                                </Button>
-                            </>
-                        )}
-                        {fileData.state === 'uploading' && fileData.cancelUpload && (
-                            <Button
-                                {...buttonsProps.cancelUpload.props}
-                                tabIndex={tabIndex}
-                                onClick={fileData.cancelUpload}
-                            >
-                                {buttonsProps.cancelUpload.children}
-                            </Button>
-                        )}
-                        {fileData.state === 'uploading' &&
-                            !fileData.cancelUpload &&
-                            buttonsProps.stub}
-                        {['uploaded', 'deletionError'].includes(fileData.state) &&
-                            !fileData.editMode &&
-                            actionMenu}
-                        {['uploaded', 'deletionError'].includes(fileData.state) &&
-                            fileData.editMode && (
-                                <>
-                                    <Button
-                                        {...buttonsProps.confirmDescription.props}
-                                        tabIndex={tabIndex}
-                                        disabled={disabledOrReadonly}
-                                        onClick={confirmDescriptionChanges}
-                                    >
-                                        {buttonsProps.confirmDescription.children}
-                                    </Button>
-                                    <Button
-                                        {...buttonsProps.undoDescription.props}
-                                        tabIndex={tabIndex}
-                                        disabled={disabledOrReadonly}
-                                        onClick={undoDescriptionChanges}
-                                    >
-                                        {buttonsProps.undoDescription.children}
-                                    </Button>
-                                </>
-                            )}
-                    </div>
-                </div>
+    return (
+        <div {...getItemProps()} {...rootStyle}>
+            {fileData.readOnly && readOnlyLabel}
+            {progressBar}
+            <div className="grid">
+                {thumbnail}
+                {inputComponent}
+                {fileSize}
+                {control}
             </div>
-        ),
-        [
-            disabled,
-            isDragActive,
-            readOnly,
-            tabIndex,
-            rootStyle,
-            thumbnail,
-            fileNameStyles,
-            actionMenu,
-            buttonsProps,
-            progressBar,
-            readOnlyLabel,
-            { ...fileData },
-            { ...getItemProps() },
-            { ...getTextFieldProps() },
-            { ...getActions() },
-        ]
+        </div>
     );
-
-    return compositeComponent;
 };
 
 export default DefaultFileItemRenderer;

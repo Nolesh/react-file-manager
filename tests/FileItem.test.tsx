@@ -12,6 +12,12 @@ import {
     TFileItemState,
     IOverriddenFileItem,
     IFileItemComponentProps,
+    TProgressBarComponent,
+    TControlFieldComponent,
+    TInputFieldComponent,
+    TSizeFieldComponent,
+    TThumbnailFieldStyles,
+    TThumbnailFieldComponent,
 } from '../src/lib/FileItemComponent';
 
 import DefaultFileItemRenderer, { fileActions } from '../src/lib/DefaultFileItemRenderer';
@@ -21,6 +27,7 @@ import { formatSize } from '../src/lib/Utils';
 import { mockFile } from './MockData';
 import { SameType } from '../src/lib/Utils/types';
 import { IRemoteFileData } from '../src/lib';
+import { debug } from 'webpack';
 
 let elementRef: React.RefObject<HTMLDivElement>;
 let itemRefs: React.RefObject<IItemRef[]>;
@@ -511,15 +518,9 @@ describe('DefaultFileItemRenderer', () => {
             'display-item-local-disabled'
         );
 
-        // edit mode
-        check(
-            { fileDataProps: { editMode: true }, fileItemProps: { isLocalFile: true } },
-            'display-item-local'
-        );
-        check(
-            { fileDataProps: { editMode: true }, fileItemProps: { isLocalFile: false } },
-            'display-item-edit-mode'
-        );
+        // // edit mode
+        check({ fileDataProps: { editMode: true, state: 'initial' } }, 'display-item-local');
+        check({ fileDataProps: { editMode: true, state: 'uploaded' } }, 'display-item-edit-mode');
 
         // rest states
         check({ fileDataProps: { state: 'deletionError' } }, 'display-item-del-error');
@@ -796,179 +797,6 @@ describe('DefaultFileItemRenderer customization', () => {
         expect(getByRole('fileitem')).toHaveStyle('background: red; opacity: 1; top: 14px;');
     });
 
-    test('should override default buttons', () => {
-        // initial state
-        const { rerender, getAllByRole, getByRole } = render(
-            <Component
-                fileItemProps={{
-                    overrides: {
-                        buttons: () => ({
-                            uploadFile: { children: 'upload', props: { title: 'upload' } },
-                            removeLocalFile: { children: 'remove', props: { title: 'remove' } },
-                        }),
-                    },
-                }}
-            />
-        );
-
-        let btns = within(getByRole('control')).queryAllByRole('button');
-        expect(btns[0].innerHTML).toEqual('upload');
-        expect(btns[0]).toHaveAttribute('title', 'upload');
-        expect(btns[1].innerHTML).toEqual('remove');
-        expect(btns[1]).toHaveAttribute('title', 'remove');
-
-        // uploading state
-        rerender(
-            <Component
-                fileDataProps={{ state: 'uploading' }}
-                fileItemProps={{
-                    overrides: {
-                        buttons: () => ({
-                            cancelUpload: { children: 'cancel', props: { title: 'cancel' } },
-                        }),
-                    },
-                }}
-            />
-        );
-
-        btns = within(getByRole('control')).queryAllByRole('button');
-        expect(btns[0].innerHTML).toEqual('cancel');
-        expect(btns[0]).toHaveAttribute('title', 'cancel');
-
-        // uploading state with no ability to cancel uploading (uploadFilesInOneRequest = true)
-        rerender(
-            <Component
-                fileDataProps={{ state: 'uploading', cancelUpload: null }}
-                fileItemProps={{
-                    overrides: {
-                        buttons: () => ({
-                            stub: <div data-testid="stub"></div>,
-                        }),
-                    },
-                }}
-            />
-        );
-
-        expect(within(getByRole('control')).getByTestId('stub')).toBeInTheDocument();
-
-        // uploaded file in edit mode
-        rerender(
-            <Component
-                fileDataProps={{ state: 'uploaded', editMode: true }}
-                fileItemProps={{
-                    overrides: {
-                        buttons: () => ({
-                            confirmDescription: {
-                                children: 'confirm',
-                                props: { title: 'confirm' },
-                            },
-                            undoDescription: { children: 'discard', props: { title: 'discard' } },
-                        }),
-                    },
-                }}
-            />
-        );
-
-        btns = within(getByRole('control')).queryAllByRole('button');
-        expect(btns[0].innerHTML).toEqual('confirm');
-        expect(btns[0]).toHaveAttribute('title', 'confirm');
-        expect(btns[1].innerHTML).toEqual('discard');
-        expect(btns[1]).toHaveAttribute('title', 'discard');
-    });
-
-    test('should override default menu', () => {
-        // initial state
-        const { rerender, getAllByRole, getByRole } = render(
-            <Component
-                fileDataProps={{ state: 'uploaded' }}
-                fileItemProps={{
-                    overrides: {
-                        actionMenu: () => ({
-                            buttonChildren: 'test',
-                            buttonProps: { title: 'test' },
-                            menuItemNames: {
-                                menuItemView: '1',
-                                menuItemDownload: '2',
-                                menuItemRename: '3',
-                                menuItemDelete: '4',
-                            },
-                            menuItemStyle: { className: 'menu-item-test-class' },
-                            menuStyles: {
-                                layer: { background: 'red' },
-                                menu: { background: 'green' },
-                            },
-                        }),
-                    },
-                    setFileDescription: renameFileDescriptionSuccess,
-                }}
-            />
-        );
-
-        expect(within(getByRole('button')).queryByText('test')).not.toBeNull();
-        expect(getByRole('button')).toHaveAttribute('title', 'test');
-        act(() => {
-            getByRole('button').click();
-        });
-
-        expect(getByRole('layer')).toHaveStyle('background: red;');
-        expect(getByRole('menu')).toHaveStyle('background: green;');
-
-        getAllByRole('menuitem').forEach((el, i) => {
-            expect(el).toHaveClass('menu-item-test-class');
-            expect(el.querySelector('svg')).not.toBeNull();
-            expect(within(el).queryByText(i + 1)).not.toBeNull();
-        });
-
-        // hide icons
-        rerender(
-            <Component
-                fileDataProps={{ state: 'uploaded' }}
-                fileItemProps={{
-                    overrides: {
-                        actionMenu: () => ({
-                            displayIcons: false,
-                        }),
-                    },
-                }}
-            />
-        );
-
-        getAllByRole('menuitem').forEach((el, i) => {
-            expect(el.querySelector('svg')).toBeNull();
-        });
-    });
-
-    test('should override default fileName', () => {
-        const { rerender, getAllByRole, getByRole, getByTestId } = render(
-            <Component
-                fileItemProps={{
-                    overrides: {
-                        fileName: () => ({
-                            textField: { className: 'textfield-test-class' },
-                        }),
-                    },
-                }}
-            />
-        );
-
-        expect(getByRole('textbox')).toHaveClass('textfield-test-class');
-
-        rerender(
-            <Component
-                fileDataProps={{ state: 'uploaded' }}
-                fileItemProps={{
-                    overrides: {
-                        fileName: () => ({
-                            readOnlyText: { className: 'text-test-class' },
-                        }),
-                    },
-                }}
-            />
-        );
-
-        expect(getByTestId('read-only-text')).toHaveClass('text-test-class');
-    });
-
     test('should override default titles', () => {
         const titles = {
             cancelUpload: 'cu',
@@ -1030,30 +858,550 @@ describe('DefaultFileItemRenderer customization', () => {
         expect(within(menu).queryByText('miDelete')).not.toBeNull();
     });
 
-    test('should override rest default elements', () => {
-        const { rerender, getAllByRole, getByRole, getByTestId } = render(
+    test('should override default buttons (control)', () => {
+        // initial state
+        const { rerender, getAllByRole, getByRole } = render(
             <Component
-                fileDataProps={{ readOnly: true }}
                 fileItemProps={{
                     overrides: {
-                        fileSize: () => ({ className: 'test-file-size-class' }),
-                        thumbnail: () => <div data-testid="custom-thumbnail"></div>,
-                        readOnlyLabel: () => <div data-testid="custom-readonlylabel"></div>,
+                        controlField: {
+                            buttons: () => ({
+                                uploadFile: { children: 'upload', props: { title: 'upload' } },
+                                removeLocalFile: { children: 'remove', props: { title: 'remove' } },
+                            }),
+                        },
+                    },
+                }}
+            />
+        );
+
+        let btns = within(getByRole('control')).queryAllByRole('button');
+        expect(btns[0].innerHTML).toEqual('upload');
+        expect(btns[0]).toHaveAttribute('title', 'upload');
+        expect(btns[1].innerHTML).toEqual('remove');
+        expect(btns[1]).toHaveAttribute('title', 'remove');
+
+        // uploading state
+        rerender(
+            <Component
+                fileDataProps={{ state: 'uploading' }}
+                fileItemProps={{
+                    overrides: {
+                        controlField: {
+                            buttons: () => ({
+                                cancelUpload: { children: 'cancel', props: { title: 'cancel' } },
+                            }),
+                        },
+                    },
+                }}
+            />
+        );
+
+        btns = within(getByRole('control')).queryAllByRole('button');
+        expect(btns[0].innerHTML).toEqual('cancel');
+        expect(btns[0]).toHaveAttribute('title', 'cancel');
+
+        // uploading state with no ability to cancel uploading (uploadFilesInOneRequest = true)
+        rerender(
+            <Component
+                fileDataProps={{ state: 'uploading', cancelUpload: null }}
+                fileItemProps={{
+                    overrides: {
+                        controlField: {
+                            buttons: () => ({
+                                loadingIcon: <div data-testid="stub"></div>,
+                            }),
+                        },
+                    },
+                }}
+            />
+        );
+
+        expect(within(getByRole('control')).getByTestId('stub')).toBeInTheDocument();
+
+        // uploaded file in edit mode
+        rerender(
+            <Component
+                fileDataProps={{ state: 'uploaded', editMode: true }}
+                fileItemProps={{
+                    overrides: {
+                        controlField: {
+                            buttons: () => ({
+                                confirmDescription: {
+                                    children: 'confirm',
+                                    props: { title: 'confirm' },
+                                },
+                                undoDescription: {
+                                    children: 'discard',
+                                    props: { title: 'discard' },
+                                },
+                            }),
+                        },
+                    },
+                }}
+            />
+        );
+
+        btns = within(getByRole('control')).queryAllByRole('button');
+        expect(btns[0].innerHTML).toEqual('confirm');
+        expect(btns[0]).toHaveAttribute('title', 'confirm');
+        expect(btns[1].innerHTML).toEqual('discard');
+        expect(btns[1]).toHaveAttribute('title', 'discard');
+    });
+
+    test('should override default menu (control)', () => {
+        // initial state
+        const { rerender, getAllByRole, getByRole } = render(
+            <Component
+                fileDataProps={{ state: 'uploaded' }}
+                fileItemProps={{
+                    overrides: {
+                        controlField: {
+                            menu: () => ({
+                                buttonChildren: 'test',
+                                buttonProps: { title: 'test' },
+                                menuItemNames: {
+                                    menuItemView: '1',
+                                    menuItemDownload: '2',
+                                    menuItemRename: '3',
+                                    menuItemDelete: '4',
+                                },
+                                menuItemStyle: { className: 'menu-item-test-class' },
+                                menuStyles: {
+                                    layer: { background: 'red' },
+                                    menu: { background: 'green' },
+                                },
+                            }),
+                        },
+                    },
+                    setFileDescription: renameFileDescriptionSuccess,
+                }}
+            />
+        );
+
+        expect(within(getByRole('button')).queryByText('test')).not.toBeNull();
+        expect(getByRole('button')).toHaveAttribute('title', 'test');
+        act(() => {
+            getByRole('button').click();
+        });
+
+        expect(getByRole('layer')).toHaveStyle('background: red;');
+        expect(getByRole('menu')).toHaveStyle('background: green;');
+
+        getAllByRole('menuitem').forEach((el, i) => {
+            expect(el).toHaveClass('menu-item-test-class');
+            expect(el.querySelector('svg')).not.toBeNull();
+            expect(within(el).queryByText(i + 1)).not.toBeNull();
+        });
+
+        // hide icons
+        rerender(
+            <Component
+                fileDataProps={{ state: 'uploaded' }}
+                fileItemProps={{
+                    overrides: {
+                        controlField: {
+                            menu: () => ({
+                                displayIcons: false,
+                            }),
+                        },
+                    },
+                }}
+            />
+        );
+
+        getAllByRole('menuitem').forEach((el, i) => {
+            expect(el.querySelector('svg')).toBeNull();
+        });
+    });
+
+    test('should override default control component', () => {
+        const controlFieldComponent: TControlFieldComponent = () => (
+            <div role="customcontrol"></div>
+        );
+        const fileItemProps = {
+            overrides: {
+                controlField: {
+                    component: controlFieldComponent,
+                },
+            },
+        };
+
+        // initial state
+        const { rerender, queryByRole } = render(
+            <Component fileDataProps={{ state: 'initial' }} fileItemProps={fileItemProps} />
+        );
+
+        expect(queryByRole('control')).not.toBeInTheDocument();
+        expect(queryByRole('customcontrol')).toBeInTheDocument();
+
+        const check = (state: TFileItemState) => {
+            rerender(<Component fileDataProps={{ state }} fileItemProps={fileItemProps} />);
+
+            expect(queryByRole('control')).not.toBeInTheDocument();
+            expect(queryByRole('customcontrol')).toBeInTheDocument();
+        };
+
+        check('uploaded');
+        check('deletionError');
+        check('uploadError');
+        check('uploading');
+    });
+
+    test('should check control component params', () => {
+        const controlComponent: TControlFieldComponent = ({
+            changeDescription,
+            changeDescriptionMode,
+            confirmDescriptionChanges,
+            undoDescriptionChanges,
+            deleteFile,
+            viewFile,
+            uploadFile,
+            downloadFile,
+            fileData,
+            noKeyboard,
+            readOnly,
+            disabled,
+        }) => {
+            expect(deleteFile).toEqual(deleteFile);
+            expect(uploadFile).toEqual(uploadFile);
+            expect(downloadFile).toEqual(downloadFile);
+            expect(viewFile).toEqual(viewFile);
+
+            expect(changeDescription).toEqual(expect.any(Function));
+            expect(changeDescriptionMode).toEqual(expect.any(Function));
+            expect(confirmDescriptionChanges).toEqual(expect.any(Function));
+            expect(undoDescriptionChanges).toEqual(expect.any(Function));
+
+            expect(fileData).toEqual(defaultFileData);
+
+            expect(disabled).toEqual(true);
+            expect(readOnly).toEqual(true);
+            expect(noKeyboard).toEqual(true);
+
+            return <div role="controlcomponent"></div>;
+        };
+
+        const fileItemProps = {
+            overrides: {
+                controlField: {
+                    component: controlComponent,
+                },
+            },
+            disabled: true,
+            readOnly: true,
+            noKeyboard: true,
+            setFileDescription: renameFileDescriptionSuccess,
+        };
+
+        const { queryByRole } = render(
+            <Component fileDataProps={defaultFileData} fileItemProps={fileItemProps} />
+        );
+
+        expect(queryByRole('controlcomponent')).toBeInTheDocument();
+    });
+
+    test('should override default fileName styles', () => {
+        const { rerender, getAllByRole, getByRole, getByTestId } = render(
+            <Component
+                fileItemProps={{
+                    overrides: {
+                        inputFieldStyles: () => ({
+                            textField: { className: 'textfield-test-class' },
+                        }),
+                    },
+                }}
+            />
+        );
+
+        expect(getByRole('textbox')).toHaveClass('textfield-test-class');
+
+        rerender(
+            <Component
+                fileDataProps={{ state: 'uploaded' }}
+                fileItemProps={{
+                    overrides: {
+                        inputFieldStyles: () => ({
+                            readOnlyText: { className: 'text-test-class' },
+                        }),
+                    },
+                }}
+            />
+        );
+
+        expect(getByTestId('read-only-text')).toHaveClass('text-test-class');
+    });
+
+    test('should override default fileName component', () => {
+        const inputFieldComponent: TInputFieldComponent = ({
+            changeDescription,
+            changeDescriptionMode,
+            confirmDescriptionChanges,
+            undoDescriptionChanges,
+            getInputFieldProps,
+            fileData,
+            disabled,
+            readOnly,
+        }) => {
+            expect(changeDescription).toEqual(expect.any(Function));
+            expect(changeDescriptionMode).toEqual(expect.any(Function));
+            expect(confirmDescriptionChanges).toEqual(expect.any(Function));
+            expect(undoDescriptionChanges).toEqual(expect.any(Function));
+            expect(getInputFieldProps).toEqual(expect.any(Function));
+
+            expect(fileData).toEqual(defaultFileData);
+            expect(disabled).toEqual(true);
+            expect(readOnly).toEqual(true);
+
+            return <div role="filenamecomponent"></div>;
+        };
+
+        const { rerender, queryByRole } = render(
+            <Component
+                fileItemProps={{
+                    overrides: {
+                        inputFieldComponent,
+                    },
+                    disabled: true,
+                    readOnly: true,
+                    setFileDescription: renameFileDescriptionSuccess,
+                }}
+                fileDataProps={defaultFileData}
+            />
+        );
+
+        expect(queryByRole('filenamecomponent')).toBeInTheDocument();
+    });
+
+    test('should override default fileSize style', () => {
+        const { rerender, getAllByRole, getByRole, getByTestId } = render(
+            <Component
+                fileItemProps={{
+                    overrides: {
+                        sizeFieldStyle: () => ({ className: 'test-file-size-class' }),
                     },
                 }}
             />
         );
 
         expect(getByRole('filesize')).toHaveClass('test-file-size-class');
-        expect(getByTestId('custom-thumbnail')).toBeInTheDocument();
-        expect(getByTestId('custom-readonlylabel')).toBeInTheDocument();
+    });
+
+    test('should override default fileSize component', () => {
+        const sizeFieldComponent: TSizeFieldComponent = ({
+            formatSize: fs,
+            fileData,
+            disabled,
+            readOnly,
+        }) => {
+            expect(fs).toEqual(formatSize);
+
+            expect(fileData).toEqual(defaultFileData);
+            expect(disabled).toEqual(true);
+            expect(readOnly).toEqual(true);
+
+            return <div role="filesizecomponent"></div>;
+        };
+
+        const { queryByRole } = render(
+            <Component
+                fileItemProps={{
+                    overrides: {
+                        sizeFieldComponent,
+                    },
+                    disabled: true,
+                    readOnly: true,
+                }}
+                fileDataProps={defaultFileData}
+            />
+        );
+
+        expect(queryByRole('filesizecomponent')).toBeInTheDocument();
+    });
+
+    test('should override default thumbnail styles', () => {
+        const thumbnailFieldStyles: TThumbnailFieldStyles = ({ fileData, readOnly, disabled }) => {
+            expect(fileData).toEqual(defaultFileData);
+            expect(disabled).toEqual(true);
+            expect(readOnly).toEqual(true);
+
+            return {
+                container: { color: 'red' },
+                default: { color: 'green' },
+            };
+        };
+
+        const { rerender, getAllByRole, getByRole, getByTestId } = render(
+            <Component
+                fileItemProps={{
+                    overrides: {
+                        thumbnailFieldStyles,
+                    },
+                    disabled: true,
+                    readOnly: true,
+                }}
+            />
+        );
+
+        const thumbnail = getByRole('thumbnail');
+        expect(thumbnail).toHaveStyle('color: red;');
+        expect(within(thumbnail).queryByText('txt')).toHaveStyle('color: green;');
 
         rerender(
             <Component
-                fileDataProps={{ state: 'uploading' }}
                 fileItemProps={{
                     overrides: {
-                        progressBar: () => <div data-testid="custom-progress"></div>,
+                        thumbnailFieldStyles: () => ({
+                            type: { color: 'white' },
+                            loading: { color: 'black' },
+                        }),
+                    },
+                }}
+                fileDataProps={{
+                    file: mockFile(),
+                    previewData: { src: null },
+                }}
+            />
+        );
+
+        expect(within(getByRole('thumbnail')).queryByText('txt')).toHaveStyle('color: white;');
+        expect(within(getByRole('thumbnail')).queryByTestId('loading-icon')).toHaveStyle(
+            'color: black;'
+        );
+
+        rerender(
+            <Component
+                fileItemProps={{
+                    overrides: {
+                        thumbnailFieldStyles: () => ({
+                            audio: {
+                                type: { color: 'brown' },
+                                buttonContainer: { color: 'orange' },
+                                buttonStart: { color: 'blue' },
+                                buttonStop: { color: 'lavender' },
+                                duration: { color: 'purple' },
+                            },
+                        }),
+                    },
+                }}
+                fileDataProps={{
+                    file: mockFile(undefined, undefined, 'audio/mpeg'),
+                    previewData: { src: 'data:audio/wav;base64,', duration: 12 },
+                    fileType: 'mpeg',
+                }}
+            />
+        );
+
+        const playBtn = within(getByRole('thumbnail')).queryByRole('button');
+        expect(playBtn).toHaveStyle('color: orange;');
+        expect(within(getByRole('thumbnail')).queryByTestId('play-icon')).toHaveStyle(
+            'color: blue;'
+        );
+        expect(within(getByRole('thumbnail')).queryByText('mpeg')).toHaveStyle('color: brown;');
+        expect(within(getByRole('thumbnail')).queryByText('00:12')).toHaveStyle('color: purple;');
+
+        act(() => {
+            playBtn.click();
+        });
+
+        expect(within(getByRole('thumbnail')).queryByTestId('stop-icon')).toHaveStyle(
+            'color: lavender;'
+        );
+        expect(within(getByRole('thumbnail')).queryByText('00:00')).toHaveStyle('color: purple;');
+
+        // set IntersectionObserver to undefined to invoke intersection callback
+        const observer = window.IntersectionObserver;
+        window.IntersectionObserver = undefined;
+        jest.spyOn(console, 'info').mockImplementation(() => undefined);
+
+        rerender(
+            <Component
+                fileItemProps={{
+                    overrides: {
+                        thumbnailFieldStyles: () => ({
+                            image: { color: 'lime' },
+                            duration: { color: 'cyan' },
+                            type: { color: 'gray' },
+                            loading: { color: 'coral' },
+                        }),
+                    },
+                }}
+                fileDataProps={{
+                    previewData: { src: 'data:image/png;base64,', duration: 12 },
+                    fileType: 'mpeg4',
+                }}
+            />
+        );
+
+        const svg = getByRole('imagelazyloader').firstChild;
+        expect(svg).toHaveStyle('color: coral;');
+
+        const img = within(getByRole('thumbnail')).queryByRole('img');
+
+        fireEvent.load(img);
+
+        expect(img).toHaveStyle('color: lime;');
+        expect(within(getByRole('thumbnail')).queryByText('mpeg4')).toHaveStyle('color: gray;');
+        expect(within(getByRole('thumbnail')).queryByText('00:12')).toHaveStyle('color: cyan;');
+
+        // restore IntersectionObserver
+        window.IntersectionObserver = observer;
+    });
+
+    test('should override default thumbnail component', () => {
+        const thumbnailFieldComponent: TThumbnailFieldComponent = ({
+            fileData,
+            disabled,
+            readOnly,
+        }) => {
+            expect(fileData).toEqual(defaultFileData);
+            expect(disabled).toEqual(true);
+            expect(readOnly).toEqual(true);
+
+            return <div role="thumbnailcomponent"></div>;
+        };
+
+        const { queryByRole } = render(
+            <Component
+                fileItemProps={{
+                    overrides: {
+                        thumbnailFieldComponent,
+                    },
+                    disabled: true,
+                    readOnly: true,
+                }}
+                fileDataProps={defaultFileData}
+            />
+        );
+
+        expect(queryByRole('thumbnailcomponent')).toBeInTheDocument();
+    });
+
+    test('should override progressBar and readOnlyLabel components', () => {
+        const { rerender, getAllByRole, getByRole, getByTestId } = render(
+            <Component
+                fileDataProps={{ readOnly: true }}
+                fileItemProps={{
+                    overrides: {
+                        readOnlyIconComponent: () => <div data-testid="custom-readonlylabel"></div>,
+                    },
+                }}
+            />
+        );
+
+        expect(getByTestId('custom-readonlylabel')).toBeInTheDocument();
+
+        const progressBarComponent: TProgressBarComponent = (progress) => {
+            expect(progress).toEqual(25);
+            return <div data-testid="custom-progress"></div>;
+        };
+
+        rerender(
+            <Component
+                fileDataProps={{ state: 'uploading', uploadedSize: 512 }}
+                fileItemProps={{
+                    overrides: {
+                        progressBarComponent,
                     },
                 }}
             />

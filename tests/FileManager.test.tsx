@@ -218,6 +218,7 @@ const mockUploadFunc = (
     });
 
     return {
+        getPromise: () => promise,
         setCustomTimer,
         advanceTimersByTime,
         advanceTimersToNextTimer,
@@ -959,9 +960,7 @@ describe('getUploadParams function', () => {
 
         const { formDataFields, restore } = mockFormData();
 
-        const { getByRole, findByText, findByTestId, findByTitle, getByTitle } = render(
-            <Manager getUploadParams={(files) => ({} as any)} />
-        );
+        const { rerender, getByRole, findByText, findByTestId } = render(<Manager />);
 
         await findByText('dragNdrop');
 
@@ -970,15 +969,26 @@ describe('getUploadParams function', () => {
 
         await findByTestId('file-container');
 
-        await act(async () => {
-            try {
-                await managerRef.current.upload();
-            } catch (e) {
-                expect(e.message).toBe(errorTxtWrongUploadParams);
-            }
-        });
+        const check = async (params?: any) => {
+            rerender(<Manager getUploadParams={params} />);
+
+            await act(async () => {
+                try {
+                    await managerRef.current.upload();
+                } catch (e) {
+                    expect(e.message).toBe(errorTxtWrongUploadParams);
+                }
+            });
+        };
+
+        const spyConsoleErr = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        await check(() => ({}));
+        await check(null);
+        await check({});
 
         restore();
+        spyConsoleErr.mockRestore();
         spy.mockRestore();
         jest.runAllTimers();
     });
@@ -1253,14 +1263,22 @@ describe('FileManager uploading', () => {
     test('should abort file uploading when component was unmounted', async () => {
         const abort = jest.fn();
 
-        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFuncReject({
-            abort,
-        } as unknown as XMLHttpRequest);
+        const { updateProgress, advanceTimersToNextTimer, getPromise, mockRestore } =
+            mockUploadFuncReject({
+                abort,
+            } as unknown as XMLHttpRequest);
 
         const onUnmountComponent = jest.fn();
+        const processError = jest.fn((err) => err.message);
 
         const { getByRole, queryAllByRole, findByText, findByTestId, unmount } = render(
-            <Manager onUnmountComponent={onUnmountComponent} />
+            <Manager
+                onUnmountComponent={onUnmountComponent}
+                getUploadParams={(files) => ({
+                    URL: `/api/singleFileUpload`,
+                    processError,
+                })}
+            />
         );
 
         await findByText('dragNdrop');
@@ -1282,6 +1300,12 @@ describe('FileManager uploading', () => {
 
         expect(abort).toBeCalledTimes(1);
         expect(onUnmountComponent).toBeCalledTimes(1);
+
+        advanceTimersToNextTimer();
+
+        await waitFor(() => undefined, { timeout: 101 });
+
+        expect(processError).toBeCalledTimes(0);
 
         jest.runAllTimers();
         mockRestore();

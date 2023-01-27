@@ -7,7 +7,7 @@ import { Paper, CircularProgress, LinearProgress } from '@material-ui/core';
 import './index.scss';
 
 // which language will be used (TypeScript or JavaScript)
-const typescript = true;
+const typescript = false;
 
 const folder = typescript ? 'ts' : 'js';
 

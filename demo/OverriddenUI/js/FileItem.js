@@ -2,53 +2,41 @@ import React, { useRef, useState } from 'react';
 
 import { AudioThumbnail } from 'react-file-manager';
 
-export const CustomFileItemRootStyles = () => {
-    const commonStyle = {
-        position: 'relative',
-        border: '1px solid black',
-        margin: 3,
-        color: 'black',
-    };
-
-    return {
-        base: {
-            className: 'display-item-overridden',
-            // style: commonStyle
-        },
-        initial: {
-            className: 'display-item-initial-overridden',
-            // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)', ...commonStyle }
-            // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
-        },
-        uploading: {
-            className: 'display-item-uploading-overridden',
-        },
-        uploaded: {
-            className: 'display-item-uploaded-overridden',
-            // style: { background: 'linear-gradient(0deg, rgba(46,133,251,1) 0%, rgba(0,212,255,1) 100%)' }
-        },
-        editMode: {
-            className: 'display-item-edit-mode-overridden',
-            // style: { background: 'linear-gradient(0deg, rgb(226 216 0) 0%, rgb(255 247 148) 100%)' }
-        },
-        uploadError: {
-            className: 'display-item-error-overridden',
-            // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
-        },
-        deletionError: {
-            className: 'display-item-error-overridden',
-            // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
-        },
-        disabled: {
-            className: 'display-item-disabled-overridden',
-            // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
-        },
-    };
+export const CustomFileItemRootStyles = {
+    base: {
+        className: 'display-item-overridden',
+    },
+    initial: {
+        className: 'display-item-initial-overridden',
+        // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
+        // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
+    },
+    uploading: {
+        className: 'display-item-uploading-overridden',
+    },
+    uploaded: {
+        className: 'display-item-uploaded-overridden',
+        // style: { background: 'linear-gradient(0deg, rgba(46,133,251,1) 0%, rgba(0,212,255,1) 100%)' }
+    },
+    editMode: {
+        className: 'display-item-edit-mode-overridden',
+        // style: { background: 'linear-gradient(0deg, rgb(226 216 0) 0%, rgb(255 247 148) 100%)' }
+    },
+    uploadError: {
+        className: 'display-item-error-overridden',
+        // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
+    },
+    deletionError: {
+        className: 'display-item-error-overridden',
+        // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
+    },
+    disabled: {
+        className: 'display-item-disabled-overridden',
+        // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
+    },
 };
 
-const Loader = () => (
-    <span className="loader"></span>
-);
+const Loader = () => <span className="loader"></span>;
 
 export const CustomFileItemThumbnail = ({ fileData, readOnly, disabled }) => {
     const type =
@@ -154,11 +142,11 @@ export const CustomButtonsProps = ({
     uploadFilesInOneRequestMode,
 }) => {
     return {
-        uploadFile: { props: { style: { background: "#afa" }, title: 'Upload' } },
-        removeLocalFile: { props: { style: { background: "#faa" }, title: 'Delete' } },
+        uploadFile: { props: { style: { background: '#afa' }, title: 'Upload' } },
+        removeLocalFile: { props: { style: { background: '#faa' }, title: 'Delete' } },
         confirmDescription: { children: <span>Yes</span>, props: { style: { color: '#07bb00' } } },
         undoDescription: { children: <span>No</span>, props: { style: { color: 'red' } } },
-        stub: <Loader />,
+        loadingIcon: <Loader />,
     };
 };
 

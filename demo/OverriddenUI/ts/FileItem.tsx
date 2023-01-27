@@ -2,64 +2,56 @@ import React, { useRef, useState } from 'react';
 
 import {
     AudioThumbnail,
-    TActionMenu,
-    TButtons,
-    TFileName,
-    TFileSize,
-    TProgressBar,
+    TProgressBarComponent,
     TFileItemRootStyles,
-    TThumbnail,
+    TThumbnailFieldComponent,
+    TInputFieldStyles,
+    TSizeFieldStyle,
+    TControlFieldMenu,
+    TControlFieldButtons,
 } from '../../../src/lib';
 
-export const CustomFileItemRootStyles = (): TFileItemRootStyles => {
-    // const commonStyle = {
-    //     position: 'relative',
-    //     border: '1px solid black',
-    //     margin: 3,
-    //     color: 'black',
-    // } as React.CSSProperties;
-
-    return {
-        base: {
-            className: 'display-item-overridden',
-            // style: commonStyle
-        },
-        initial: {
-            className: 'display-item-initial-overridden',
-            // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)', ...commonStyle }
-            // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
-        },
-        uploading: {
-            className: 'display-item-uploading-overridden',
-        },
-        uploaded: {
-            className: 'display-item-uploaded-overridden',
-            // style: { background: 'linear-gradient(0deg, rgba(46,133,251,1) 0%, rgba(0,212,255,1) 100%)' }
-        },
-        editMode: {
-            className: 'display-item-edit-mode-overridden',
-            // style: { background: 'linear-gradient(0deg, rgb(226 216 0) 0%, rgb(255 247 148) 100%)' }
-        },
-        uploadError: {
-            className: 'display-item-error-overridden',
-            // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
-        },
-        deletionError: {
-            className: 'display-item-error-overridden',
-            // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
-        },
-        disabled: {
-            className: 'display-item-disabled-overridden',
-            // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
-        },
-    };
+export const CustomFileItemRootStyles: TFileItemRootStyles = {
+    base: {
+        className: 'display-item-overridden',
+    },
+    initial: {
+        className: 'display-item-initial-overridden',
+        // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
+        // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
+    },
+    uploading: {
+        className: 'display-item-uploading-overridden',
+    },
+    uploaded: {
+        className: 'display-item-uploaded-overridden',
+        // style: { background: 'linear-gradient(0deg, rgba(46,133,251,1) 0%, rgba(0,212,255,1) 100%)' }
+    },
+    editMode: {
+        className: 'display-item-edit-mode-overridden',
+        // style: { background: 'linear-gradient(0deg, rgb(226 216 0) 0%, rgb(255 247 148) 100%)' }
+    },
+    uploadError: {
+        className: 'display-item-error-overridden',
+        // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
+    },
+    deletionError: {
+        className: 'display-item-error-overridden',
+        // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
+    },
+    disabled: {
+        className: 'display-item-disabled-overridden',
+        // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
+    },
 };
 
-const Loader = () => (
-    <span className="loader"></span>
-);
+const Loader = () => <span className="loader"></span>;
 
-export const CustomFileItemThumbnail: TThumbnail = ({ fileData, readOnly, disabled }) => {
+export const CustomFileItemThumbnail: TThumbnailFieldComponent = ({
+    fileData,
+    readOnly,
+    disabled,
+}) => {
     const type =
         fileData.fileType ||
         fileData?.file?.type?.split('/')?.pop()?.toUpperCase() ||
@@ -110,7 +102,7 @@ export const CustomFileItemThumbnail: TThumbnail = ({ fileData, readOnly, disabl
     );
 };
 
-export const CustomFileItemNameStyles: TFileName = ({ fileData, readOnly, disabled }) => ({
+export const CustomFileItemNameStyles: TInputFieldStyles = ({ fileData, readOnly, disabled }) => ({
     readOnlyText: {
         style: {
             fontSize: 17,
@@ -132,7 +124,7 @@ export const CustomFileItemNameStyles: TFileName = ({ fileData, readOnly, disabl
     },
 });
 
-export const CustomFileItemSizeStyle: TFileSize = ({ fileData, readOnly, disabled }) => {
+export const CustomFileItemSizeStyle: TSizeFieldStyle = ({ fileData, readOnly, disabled }) => {
     const noBorder = readOnly || disabled || fileData.disabled || fileData.readOnly;
     return {
         style: {
@@ -144,7 +136,7 @@ export const CustomFileItemSizeStyle: TFileSize = ({ fileData, readOnly, disable
     };
 };
 
-export const CustomActionMenuProps: TActionMenu = ({ fileData, readOnly, disabled }) => {
+export const CustomActionMenuProps: TControlFieldMenu = ({ fileData, readOnly, disabled }) => {
     return {
         buttonProps: { title: 'File actions', style: { fontSize: 19, fontWeight: 'bold' } },
         buttonChildren: <span>...</span>,
@@ -156,22 +148,17 @@ export const CustomActionMenuProps: TActionMenu = ({ fileData, readOnly, disable
     };
 };
 
-export const CustomButtonsProps: TButtons = ({
-    fileData,
-    readOnly,
-    disabled,
-    uploadFilesInOneRequestMode,
-}) => {
+export const CustomButtonsProps: TControlFieldButtons = ({ fileData, readOnly, disabled }) => {
     return {
-        uploadFile: { props: { style: { background: "#afa" }, title: 'Upload' } },
-        removeLocalFile: { props: { style: { background: "#faa" }, title: 'Delete' } },
+        uploadFile: { props: { style: { background: '#afa' }, title: 'Upload' } },
+        removeLocalFile: { props: { style: { background: '#faa' }, title: 'Delete' } },
         confirmDescription: { children: <span>Yes</span>, props: { style: { color: '#07bb00' } } },
         undoDescription: { children: <span>No</span>, props: { style: { color: 'red' } } },
-        stub: <Loader />,
+        loadingIcon: <Loader />,
     };
 };
 
-export const CustomProgressBar: TProgressBar = (progress) => {
+export const CustomProgressBar: TProgressBarComponent = (progress) => {
     // return <div style={{position:'absolute', left:0, height: 3, background: 'rgb(0 120 255)', width:`calc(${progress}% - 7px)`}}></div>;
     return (
         <progress

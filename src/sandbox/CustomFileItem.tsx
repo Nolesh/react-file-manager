@@ -1,66 +1,87 @@
 import React, { useRef, useState } from 'react';
 
 import {
-    TFileSize,
+    TTitles,
     TFileItemRootStyles,
-    TThumbnail,
-    TActionMenu,
-    TFileName,
-    TButtons,
-    TProgressBar,
-    TReadOnlyLabel,
+    TProgressBarComponent,
     IFileData,
+    ActionMenu,
+    Button,
+    IInputFieldProps,
+    TThumbnailFieldStyles,
+    TThumbnailFieldComponent,
+    TInputFieldStyles,
+    TInputFieldComponent,
+    TSizeFieldStyle,
+    TSizeFieldComponent,
+    TControlFieldMenu,
+    TControlFieldButtons,
+    TControlFieldComponent,
+    TReadOnlyIconComponent,
 } from '../lib';
 
-import { Button, TextField, Menu, MenuItem, CircularProgress } from '@material-ui/core';
+import { Select, MenuItem, CircularProgress } from '@material-ui/core';
 
-export const CustomFileItemRootStyles = (): TFileItemRootStyles => {
-    const commonStyle = {
-        position: 'relative',
-        border: '1px solid black',
-        margin: 3,
-        color: 'black',
-        // opacity:1
-    } as React.CSSProperties;
+const SelectField = (props: {
+    data: string[];
+    disabled: boolean;
+    inputProps: IInputFieldProps;
+}) => {
+    const data = Array.from(new Set([...props.data, props.inputProps.value]));
 
-    return {
-        base: {
-            className: 'display-item-custom',
-            style: commonStyle,
+    return (
+        <Select fullWidth={true} disabled={props.disabled} {...props.inputProps}>
+            {data.map((x, i) => (
+                <MenuItem key={i} value={x}>
+                    {x}
+                </MenuItem>
+            ))}
+        </Select>
+    );
+};
+
+export const CustomFileItemRootStyles: TFileItemRootStyles = {
+    base: {
+        className: 'display-item-custom',
+        style: {
+            position: 'relative',
+            border: '1px solid black',
+            margin: 3,
+            color: 'black',
         },
-        local: {
-            className: 'display-item-local-custom',
-            // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)', ...commonStyle }
-            // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
-        },
-        uploading: {
-            className: 'display-item-uploading-custom',
-        },
-        uploaded: {
-            className: 'display-item-uploaded-custom',
-            // style: { background: 'linear-gradient(0deg, rgba(46,133,251,1) 0%, rgba(0,212,255,1) 100%)' }
-        },
-        editMode: {
-            className: 'display-item-edit-mode-custom',
-            // style: { background: 'linear-gradient(0deg, rgb(226 216 0) 0%, rgb(255 247 148) 100%)' }
-        },
-        uploadError: {
-            className: 'display-item-error-custom',
-            // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
-        },
-        deletionError: {
-            className: 'display-item-error-custom',
-            // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
-        },
-        uploadedDisabled: {
-            className: 'display-item-uploaded-disabled-custom',
-            // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
-        },
-        localDisabled: {
-            className: 'display-item-local-disabled-custom',
-            // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
-        },
-    };
+    },
+    local: {
+        className: 'display-item-local-custom',
+        // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
+        // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
+    },
+    uploading: {
+        className: 'display-item-uploading-custom',
+    },
+    uploaded: {
+        className: 'display-item-uploaded-custom',
+        // style: { background: 'linear-gradient(0deg, rgba(46,133,251,1) 0%, rgba(0,212,255,1) 100%)' }
+    },
+    editMode: {
+        className: 'display-item-edit-mode-custom',
+        // style: { background: 'linear-gradient(0deg, rgb(226 216 0) 0%, rgb(255 247 148) 100%)' }
+    },
+    uploadError: {
+        className: 'display-item-error-custom',
+        // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
+    },
+    deletionError: {
+        className: 'display-item-error-custom',
+        // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
+    },
+    uploadedDisabled: {
+        className: 'display-item-uploaded-disabled-custom',
+        // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
+    },
+    localDisabled: {
+        className: 'display-item-local-disabled-custom',
+        // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
+    },
 };
 
 const formatDuration = (sec: number) => (
@@ -162,7 +183,39 @@ const Loader = () => (
     </span>
 );
 
-export const CustomFileItemThumbnail: TThumbnail = ({ fileData, readOnly, disabled }) => {
+export const CustomTitles: TTitles = {
+    menuButtonTitle: 'File actions',
+    menuItemView: 'View',
+    menuItemDownload: 'Download',
+    menuItemRename: 'Rename',
+    menuItemDelete: 'Delete',
+};
+
+export const CustomFileItemThumbnailStyles: TThumbnailFieldStyles = ({
+    fileData,
+    readOnly,
+    disabled,
+}) => ({
+    container: { border: '1px dashed red' },
+    type: { color: 'red' },
+    loading: { fill: 'red' },
+    audio: {
+        type: { color: 'yellow' },
+        duration: { color: 'yellow' },
+        buttonContainer: { background: 'red' },
+        buttonStart: { color: 'white' },
+        buttonStop: { color: 'white' },
+    },
+    image: { maxWidth: 48, maxHeight: 48 },
+    duration: { color: 'red' },
+    default: { color: 'red' },
+});
+
+export const CustomFileItemThumbnailComponent: TThumbnailFieldComponent = ({
+    fileData,
+    readOnly,
+    disabled,
+}) => {
     const type =
         fileData.fileType ||
         fileData?.file?.type?.split('/')?.pop()?.toUpperCase() ||
@@ -208,7 +261,7 @@ export const CustomFileItemThumbnail: TThumbnail = ({ fileData, readOnly, disabl
     );
 };
 
-export const CustomFileItemNameStyles: TFileName = ({ fileData, readOnly, disabled }) => ({
+export const CustomFileItemNameStyles: TInputFieldStyles = ({ fileData, readOnly, disabled }) => ({
     readOnlyText: {
         style: {
             fontSize: 17,
@@ -230,7 +283,28 @@ export const CustomFileItemNameStyles: TFileName = ({ fileData, readOnly, disabl
     },
 });
 
-export const CustomFileItemSizeStyle: TFileSize = ({ fileData, readOnly, disabled }) => {
+export const CustomFileItemNameComponent: TInputFieldComponent = (props) => {
+    const readOnlyOrDisabled =
+        props.disabled || props.readOnly || props.fileData.readOnly || props.fileData.disabled;
+
+    return (
+        <SelectField
+            data={[
+                'Antares',
+                'Betelgeuse',
+                'Calvera',
+                'Deneb',
+                props.fileData.oldDescription ||
+                    props.fileData.description ||
+                    props.fileData.fileName,
+            ]}
+            disabled={readOnlyOrDisabled || !props.fileData.editMode}
+            inputProps={props.getInputFieldProps()}
+        />
+    );
+};
+
+export const CustomFileItemSizeStyle: TSizeFieldStyle = ({ fileData, readOnly, disabled }) => {
     const noBorder = readOnly || disabled || fileData.disabled || fileData.readOnly;
     return {
         style: {
@@ -242,7 +316,26 @@ export const CustomFileItemSizeStyle: TFileSize = ({ fileData, readOnly, disable
     };
 };
 
-export const CustomActionMenuProps: TActionMenu = ({ fileData, readOnly, disabled }) => {
+export const CustomFileItemSizeComponent: TSizeFieldComponent = ({
+    fileData,
+    readOnly,
+    disabled,
+    formatSize,
+}) => {
+    const readOnlyOrDisabled = readOnly || disabled || fileData.disabled || fileData.readOnly;
+    return (
+        <div
+            style={{
+                color: readOnlyOrDisabled ? 'white' : 'yellowgreen',
+                fontWeight: 'bold',
+            }}
+        >
+            {formatSize(fileData.fileSize).toUpperCase()}
+        </div>
+    );
+};
+
+export const CustomActionMenuProps: TControlFieldMenu = ({ fileData, readOnly, disabled }) => {
     return {
         buttonProps: { title: 'File actions', style: { fontSize: 19, fontWeight: 'bold' } },
         buttonChildren: <span>...</span>,
@@ -261,22 +354,134 @@ export const CustomActionMenuProps: TActionMenu = ({ fileData, readOnly, disable
     };
 };
 
-export const CustomButtonsProps: TButtons = ({
-    fileData,
-    readOnly,
-    disabled,
-    uploadFilesInOneRequestMode,
-}) => {
+export const CustomButtonsProps: TControlFieldButtons = ({ fileData, readOnly, disabled }) => {
     return {
         uploadFile: { props: { style: { background: '#afa' } } },
         removeLocalFile: { props: { style: { background: '#faa' } } },
         confirmDescription: { children: <span>Yes</span>, props: { style: { color: '#07bb00' } } },
         undoDescription: { children: <span>No</span>, props: { style: { color: 'red' } } },
-        stub: <CircularProgress />,
+        loadingIcon: <CircularProgress />,
     };
 };
 
-export const CustomProgressBar: TProgressBar = (progress) => {
+export const CustomControlComponent: TControlFieldComponent = ({
+    fileData,
+    readOnly,
+    disabled,
+    noKeyboard,
+    changeDescription,
+    changeDescriptionMode,
+    confirmDescriptionChanges,
+    deleteFile,
+    downloadFile,
+    undoDescriptionChanges,
+    viewFile,
+    uploadFile,
+}) => {
+    const tabIndex = noKeyboard ? -1 : 0;
+    const disabledOrReadonly = disabled || fileData.disabled || readOnly || fileData.readOnly;
+    const { cancelUpload } = fileData;
+    // console.log('cancelUpload', cancelUpload);
+
+    return (
+        <div>
+            {!['uploaded', 'uploading', 'deletionError'].includes(fileData.state) && (
+                <ActionMenu
+                    key={`actionMenu-${fileData.uid}`}
+                    id={fileData.uid}
+                    actions={[
+                        {
+                            name: 'Upload',
+                            action: uploadFile && uploadFile.bind(null, fileData as any),
+                        },
+                        {
+                            name: 'Remove',
+                            action: deleteFile && deleteFile.bind(null, fileData),
+                        },
+                    ]}
+                    buttonProps={{
+                        title: 'File menu',
+                        tabIndex: tabIndex,
+                    }}
+                    buttonChildren={<div style={{ fontSize: 28 }}>&equiv;</div>}
+                    disabled={disabled || fileData.disabled}
+                />
+            )}
+            {fileData.state === 'uploading' && cancelUpload && (
+                <Button
+                    title="Cancel upload"
+                    className="icon-button"
+                    tabIndex={tabIndex}
+                    onClick={cancelUpload}
+                >
+                    &#x02717;
+                </Button>
+            )}
+            {fileData.state === 'uploading' && !cancelUpload && (
+                <CircularProgress style={{ color: 'white' }} />
+            )}
+            {['uploaded', 'deletionError'].includes(fileData.state) && !fileData.editMode && (
+                <ActionMenu
+                    key={`actionMenu-${fileData.uid}`}
+                    id={fileData.uid}
+                    actions={[
+                        {
+                            name: 'View',
+                            action: viewFile.bind(null, fileData),
+                        },
+                        {
+                            name: 'Download',
+                            action: downloadFile.bind(null, fileData),
+                        },
+                    ]
+                        .concat(
+                            !fileData.readOnly
+                                ? [
+                                      {
+                                          name: 'Rename',
+                                          action: changeDescriptionMode,
+                                      },
+                                      {
+                                          name: 'Delete',
+                                          action: deleteFile && deleteFile.bind(null, fileData),
+                                      },
+                                  ]
+                                : (null as any)
+                        )
+                        .filter((x) => x != null)}
+                    buttonProps={{
+                        title: 'File menu',
+                        tabIndex: tabIndex,
+                    }}
+                    buttonChildren={<div style={{ fontSize: 28, color: '#777' }}>&equiv;</div>}
+                    disabled={disabled || fileData.disabled}
+                />
+            )}
+            {['uploaded', 'deletionError'].includes(fileData.state) && fileData.editMode && (
+                <>
+                    <Button
+                        title="Confirm"
+                        tabIndex={tabIndex}
+                        disabled={disabledOrReadonly}
+                        onClick={confirmDescriptionChanges}
+                    >
+                        &#x02713;
+                    </Button>
+                    <Button
+                        title="Cancel"
+                        tabIndex={tabIndex}
+                        disabled={disabledOrReadonly}
+                        onClick={undoDescriptionChanges}
+                    >
+                        &#x02717;
+                    </Button>
+                </>
+            )}
+        </div>
+    );
+};
+
+export const CustomProgressBar: TProgressBarComponent = (progress) => {
     // return <div style={{position:'absolute', left:0, height: 3, background: 'rgb(0 120 255)', width:`calc(${progress}% - 7px)`}}></div>;
     return (
         <progress
@@ -287,7 +492,7 @@ export const CustomProgressBar: TProgressBar = (progress) => {
     );
 };
 
-export const CustomReadOnlyLabel: TReadOnlyLabel = () => (
+export const CustomReadOnlyIcon: TReadOnlyIconComponent = () => (
     <div
         style={{ position: 'absolute', bottom: 1, right: 1, fontSize: 12, cursor: 'default' }}
         title="Read-only mode"

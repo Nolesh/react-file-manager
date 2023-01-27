@@ -162,7 +162,7 @@ const getThumbnail = (fileData: ILocalFileData, type: string, root: HTMLDivEleme
 
 const CustomFileItemRenderer = ({
     fileData,
-    getTextFieldProps,
+    getInputFieldProps,
     getItemProps,
     getCommonProps,
     getActions,
@@ -232,7 +232,7 @@ const CustomFileItemRenderer = ({
                             {fileData.description || fileData.fileName}
                         </div>
                     ) : (
-                        <TextField {...getTextFieldProps()} tabIndex={tabIndex} />
+                        <TextField {...getInputFieldProps()} tabIndex={tabIndex} />
                     )}
                 </>
                 <div role="filesize">{formatSize(fileData.fileSize)}</div>
@@ -305,7 +305,7 @@ const CustomFileItemRenderer = ({
                                 <CheckIcon style={getIconStyle()} />
                             </Button>
                             <Button
-                                title="Confirm"
+                                title="Cancel"
                                 className="icon-button-neg"
                                 tabIndex={tabIndex}
                                 disabled={disabledOrReadonly}

@@ -28,12 +28,17 @@ import { CustomRootComponent } from './CustomRootComponent';
 import {
     CustomFileItemRootStyles,
     CustomFileItemNameStyles,
-    CustomFileItemThumbnail,
     CustomFileItemSizeStyle,
     CustomActionMenuProps,
     CustomButtonsProps,
     CustomProgressBar,
-    CustomReadOnlyLabel,
+    CustomReadOnlyIcon,
+    CustomFileItemNameComponent,
+    CustomFileItemThumbnailComponent,
+    CustomFileItemThumbnailStyles,
+    CustomTitles,
+    CustomFileItemSizeComponent,
+    CustomControlComponent,
 } from './CustomFileItem';
 import { createMaterialFileItemRenderer } from './MaterialFileItemRenderer';
 import CustomFileItemRenderer from './CustomFileItemRenderer';
@@ -136,7 +141,7 @@ const uploadFileParams: TGetUploadParams = (localFileData) =>
               // method: 'PUT',
               // timeout: 0,
               // Extracts an array of files or a single file from an object because response was deliberately wrapped in an object
-              // processResponse: (response) => response?.file ?? response?.files,
+              //   processResponse: (response) => response?.file ?? response?.files,
               processResponse: (response) => localFileData,
               // checkResult: (result) => result.file_id === localFileData.uid,
               processError: getErrorMessage,
@@ -237,6 +242,118 @@ const fileValidator: TFileValidator = (file, local, remote) => {
     return null;
 };
 
+const viewFile: IFileManagerProps['viewFile'] = (fileData) => {
+    console.log('viewFile', fileData);
+
+    // Case 1: requests a blob from the server and handles the error if it exists
+
+    return request(`file/${fileData.fileName}`).then((resp) => resp.blob());
+
+    // .then(async resp => {
+    //     if (!resp.ok) {
+    //         const errorInfo = await resp.json() as {status:number, message: string};
+    //         throw errorInfo;
+    //     }
+    //     else return await resp.blob();
+    // });
+
+    // Case 2: custom implementation
+
+    // if(!fileData?.previewData?.src) return Promise.reject('Something went wrong!');
+    //
+    // var image = new Image();
+    // image.src = fileData.previewData.src;
+    // var w = window.open("");
+    // w.document.write(image.outerHTML);
+    //
+    // return Promise.resolve();
+};
+
+const downloadFile: IFileManagerProps['downloadFile'] = async (fileData) => {
+    console.log('downloadFile', fileData);
+
+    // Case 1: uses the default filename(description) and handles the error if it exists
+
+    return request(`file/${fileData.fileName}`).then((resp) => resp.blob());
+
+    // OR
+
+    // Case 2: uses the filename from the server and handles the error if it exists
+
+    // return request(`file/${fileData.fileName}`)
+    // .then(async resp => {
+    //     // let fileName = resp.headers.get('filename'); // get filename from the server
+    //     const fileName = resp.headers.get('Content-Disposition').split('filename=')[1].split(';')[0].replace(/['"]/g, '');;
+    //     const blob = await resp.blob();
+    //     return Promise.resolve({blob, fileName});
+    // });
+
+    // OR
+
+    // Case 3: custom implementation
+
+    // if(!fileData?.previewData?.src) return Promise.reject('Something went wrong!');
+    //
+    // return fetch(fileData.previewData.src) // convert base64 to blob
+    // .then(resp => resp.blob())
+    // .then(resp => {
+    //     const a = document.createElement('a');
+    //     document.body.appendChild(a);
+    //     const url = window.URL.createObjectURL(resp);
+    //     a.href = url;
+    //     a.download = 'custom_'+fileData.fileName;
+    //     a.click();
+    //     document.body.removeChild(a);
+    //     setTimeout(() => window.URL.revokeObjectURL(url), 0);
+    //
+    //     return Promise.resolve();
+    // });
+
+    // OR
+
+    // const blob = await fetch(fileData.previewData.src).then(resp => resp.blob());
+    // const fileName = 'custom_'+fileData.fileName;
+    //
+    // // save the file under a new name
+    // return Promise.resolve({blob, fileName});
+};
+
+const deleteFile: IFileManagerProps['deleteFile'] = (fileData) => {
+    console.log('deleteFile', fileData);
+    return new Promise((resolve, reject) => {
+        fileData.elementRef.current.scrollIntoView({
+            behavior: 'auto',
+            block: 'center',
+        });
+        const defBorder = fileData.elementRef.current.style.border;
+        fileData.elementRef.current.style.border = '1px solid red';
+        fileData.elementRef.current.style.transition = 'none';
+        // give some time for animation
+        setTimeout(() => {
+            if (window.confirm('Are you sure you want to delete this file?')) {
+                request(`file/${fileData.uid}`, 'DELETE')
+                    .then((response) => response.json())
+                    .then((resp) => {
+                        if (resp.result) resolve();
+                        else reject(resp.error);
+                    })
+                    .catch((err) => reject(err));
+            } else {
+                fileData.elementRef.current.style.border = defBorder;
+                reject();
+            }
+        }, 10);
+    });
+};
+
+const setFileDescription: IFileManagerProps['setFileDescription'] = (fileData) => {
+    console.log('setFileDescription', fileData.description);
+    return request(`file/${fileData.uid}`, 'PATCH', {
+        description: fileData.description,
+    }).then((response) => (response.ok && response.text()) || Promise.reject(response.statusText));
+    // .catch(err => Promise.reject(err))
+};
+
 const handleErrors: TOnError = (err) => {
     if (Array.isArray(err)) {
         const messages = err.reduce(
@@ -310,135 +427,35 @@ export const Manager: FC = (): ReactElement => {
                             // ...data
                         })}
                         getUploadParams={uploadFileParams}
-                        viewFile={(fileData) => {
-                            console.log('viewFile', fileData);
-
-                            // Case 1: requests a blob from the server and handles the error if it exists
-
-                            return request(`file/${fileData.fileName}`).then((resp) => resp.blob());
-
-                            // .then(async resp => {
-                            //     if (!resp.ok) {
-                            //         const errorInfo = await resp.json() as {status:number, message: string};
-                            //         throw errorInfo;
-                            //     }
-                            //     else return await resp.blob();
-                            // });
-
-                            // Case 2: custom implementation
-
-                            // if(!fileData?.previewData?.src) return Promise.reject('Something went wrong!');
-                            //
-                            // var image = new Image();
-                            // image.src = fileData.previewData.src;
-                            // var w = window.open("");
-                            // w.document.write(image.outerHTML);
-                            //
-                            // return Promise.resolve();
-                        }}
-                        downloadFile={async (fileData) => {
-                            console.log('downloadFile', fileData);
-
-                            // Case 1: uses the default filename(description) and handles the error if it exists
-
-                            return request(`file/${fileData.fileName}`).then((resp) => resp.blob());
-
-                            // OR
-
-                            // Case 2: uses the filename from the server and handles the error if it exists
-
-                            // return request(`file/${fileData.fileName}`)
-                            // .then(async resp => {
-                            //     // let fileName = resp.headers.get('filename'); // get filename from the server
-                            //     const fileName = resp.headers.get('Content-Disposition').split('filename=')[1].split(';')[0].replace(/['"]/g, '');;
-                            //     const blob = await resp.blob();
-                            //     return Promise.resolve({blob, fileName});
-                            // });
-
-                            // OR
-
-                            // Case 3: custom implementation
-
-                            // if(!fileData?.previewData?.src) return Promise.reject('Something went wrong!');
-                            //
-                            // return fetch(fileData.previewData.src) // convert base64 to blob
-                            // .then(resp => resp.blob())
-                            // .then(resp => {
-                            //     const a = document.createElement('a');
-                            //     document.body.appendChild(a);
-                            //     const url = window.URL.createObjectURL(resp);
-                            //     a.href = url;
-                            //     a.download = 'custom_'+fileData.fileName;
-                            //     a.click();
-                            //     document.body.removeChild(a);
-                            //     setTimeout(() => window.URL.revokeObjectURL(url), 0);
-                            //
-                            //     return Promise.resolve();
-                            // });
-
-                            // OR
-
-                            // const blob = await fetch(fileData.previewData.src).then(resp => resp.blob());
-                            // const fileName = 'custom_'+fileData.fileName;
-                            //
-                            // // save the file under a new name
-                            // return Promise.resolve({blob, fileName});
-                        }}
-                        deleteFile={(fileData) => {
-                            console.log('deleteFile', fileData);
-                            return new Promise((resolve, reject) => {
-                                fileData.elementRef.current.scrollIntoView({
-                                    behavior: 'auto',
-                                    block: 'center',
-                                });
-                                const defBorder = fileData.elementRef.current.style.border;
-                                fileData.elementRef.current.style.border = '1px solid red';
-                                fileData.elementRef.current.style.transition = 'none';
-                                // give some time for animation
-                                setTimeout(() => {
-                                    if (
-                                        window.confirm('Are you sure you want to delete this file?')
-                                    ) {
-                                        request(`file/${fileData.uid}`, 'DELETE')
-                                            .then((response) => response.json())
-                                            .then((resp) => {
-                                                if (resp.result) resolve();
-                                                else reject(resp.error);
-                                            })
-                                            .catch((err) => reject(err));
-                                    } else {
-                                        fileData.elementRef.current.style.border = defBorder;
-                                        reject();
-                                    }
-                                }, 10);
-                            });
-                        }}
-                        setFileDescription={(fileData) => {
-                            console.log('setFileDescription', fileData.description);
-                            return request(`file/${fileData.uid}`, 'PATCH', {
-                                description: fileData.description,
-                            }).then(
-                                (response) =>
-                                    (response.ok && response.text()) ||
-                                    Promise.reject(response.statusText)
-                            );
-                            // .catch(err => Promise.reject(err))
-                        }}
+                        viewFile={viewFile}
+                        downloadFile={downloadFile}
+                        deleteFile={deleteFile}
+                        setFileDescription={setFileDescription}
+                        // setFileDescription={(fileData) => {
+                        //     console.log('setFileDescription', fileData.description);
+                        //     return request(`file/${fileData.uid}`, 'PATCH', {
+                        //         description: fileData.description,
+                        //     }).then(
+                        //         (response) =>
+                        //             (response.ok && response.text()) ||
+                        //             Promise.reject(response.statusText)
+                        //     );
+                        // }}
                         // sortFiles={handleSorting}
                         filePreview={generateFilePreview}
                         // fileValidator={fileValidator}
-                        onFilesUploaded={(fileData) => {
-                            console.log(
-                                'onFileUploaded',
-                                fileData,
-                                fileData[0].elementRef?.current
-                            );
-                            fileData[0]?.elementRef?.current &&
-                                fileData[0].elementRef.current.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'center',
-                                });
-                        }}
+                        // onFilesUploaded={(fileData) => {
+                        //     console.log(
+                        //         'onFileUploaded',
+                        //         fileData,
+                        //         fileData[0].elementRef?.current
+                        //     );
+                        //     fileData[0]?.elementRef?.current &&
+                        //         fileData[0].elementRef.current.scrollIntoView({
+                        //             behavior: 'smooth',
+                        //             block: 'center',
+                        //         });
+                        // }}
                         onUploadProgress={(progress, sentBytes, totalBytes) => {
                             console.log('progress', progress, sentBytes, totalBytes);
                             progressRef.current.style.display = !!progress ? 'block' : 'none';
@@ -519,26 +536,42 @@ export const Manager: FC = (): ReactElement => {
                                     // dropZone: {width: 460, height: 250, overflowY: 'scroll'},
                                     // header: { background: '#3f52b5', color: 'white' },
                                     // footer: { background: '#3f52b5', color: 'white' },
+                                    // header: { fontFamily: 'century gothic' },
+                                    // dropZone: { fontFamily: 'century gothic' },
                                 },
                                 // component: CustomRootComponent // Overrides all options above (Root)!
                             },
                             FileItem: {
                                 // All options are independent and optional.
-                                titles: {
-                                    // menuButtonTitle: 'File actions',
-                                    // menuItemView: 'View',
-                                    // menuItemDownload: 'Download',
-                                    // menuItemRename: 'Rename',
-                                    // menuItemDelete: 'Delete',
+                                // titles: {
+                                //     menuButtonTitle: 'File actions',
+                                //     menuItemView: 'View',
+                                //     menuItemDownload: 'Download',
+                                //     menuItemRename: 'Rename',
+                                //     menuItemDelete: 'Delete',
+                                // },
+                                titles: CustomTitles,
+
+                                rootStyles: CustomFileItemRootStyles,
+
+                                thumbnailFieldStyles: CustomFileItemThumbnailStyles,
+                                // thumbnailFieldComponent: CustomFileItemThumbnailComponent,
+
+                                // inputFieldStyles: CustomFileItemNameStyles,
+                                inputFieldComponent: CustomFileItemNameComponent,
+
+                                // sizeFieldStyle: CustomFileItemSizeStyle,
+                                sizeFieldComponent: CustomFileItemSizeComponent,
+
+                                controlField: {
+                                    buttons: CustomButtonsProps,
+                                    menu: CustomActionMenuProps,
+                                    component: CustomControlComponent,
                                 },
-                                // rootStyles: CustomFileItemRootStyles(),
-                                // thumbnail: CustomFileItemThumbnail,
-                                // fileName: CustomFileItemNameStyles,
-                                // fileSize: CustomFileItemSizeStyle,
-                                actionMenu: CustomActionMenuProps,
-                                // buttons: CustomButtonsProps,
-                                // progressBar: CustomProgressBar,
-                                // readOnlyLabel: CustomReadOnlyLabel,
+
+                                progressBarComponent: CustomProgressBar,
+                                // readOnlyIconComponent: CustomReadOnlyIcon,
+
                                 // component: createMaterialFileItemRenderer(), // Overrides all options above (FileItem)!
                                 // component: CustomFileItemRenderer, // Overrides all options above (FileItem)!
                             },

@@ -29,6 +29,7 @@ import {
     IItemMountState,
     IItemRef,
     IFileItemComponentProps,
+    TFileSizeFormatter,
 } from './FileItemComponent';
 
 import DefaultFileItemRenderer from './DefaultFileItemRenderer';
@@ -113,7 +114,7 @@ export type TFileValidator<T = PartialBy<TCustomError, 'errorId'>> = (
 
 export type TOverrides = {
     uidGenerator?: () => string;
-    fileSizeFormatter?: (size: number) => string;
+    fileSizeFormatter?: TFileSizeFormatter;
     Root?: IOverriddenRoot;
     FileItem?: IOverriddenFileItem;
 };
@@ -342,17 +343,32 @@ const FileManager = forwardRef(
         const { isLoading, isUploading, forceUpdateTrigger, localFiles, remoteFiles, dragData } =
             state;
 
-        const setIsLoading = (state: boolean) => dispatch({ type: 'setIsLoading', result: state });
-        const setIsUploading = (state: boolean) =>
-            dispatch({ type: 'setIsUploading', result: state });
-        const forceUpdate = () => dataRef.current.isMounted && dispatch({ type: 'forceUpdate' });
-        const setLocalFiles = (files: ILocalFileData[]) =>
-            dispatch({ type: 'setLocalFiles', result: files });
-        const setRemoteFiles = (
-            files: IRemoteFileData[] | ((files: IRemoteFileData[]) => IRemoteFileData[])
-        ) => dispatch({ type: 'setRemoteFiles', result: files });
-        const setDragData = (data: SameType<boolean, 'active' | 'reject'>) =>
-            dispatch({ type: 'setDragData', dragData: data });
+        const setIsLoading = useCallback(
+            (state: boolean) => dispatch({ type: 'setIsLoading', result: state }),
+            [dispatch]
+        );
+        const setIsUploading = useCallback(
+            (state: boolean) => dispatch({ type: 'setIsUploading', result: state }),
+            [dispatch]
+        );
+        const forceUpdate = useCallback(
+            () => dataRef.current.isMounted && dispatch({ type: 'forceUpdate' }),
+            [dispatch, dataRef]
+        );
+        const setLocalFiles = useCallback(
+            (files: ILocalFileData[]) => dispatch({ type: 'setLocalFiles', result: files }),
+            [dispatch]
+        );
+        const setRemoteFiles = useCallback(
+            (files: IRemoteFileData[] | ((files: IRemoteFileData[]) => IRemoteFileData[])) =>
+                dispatch({ type: 'setRemoteFiles', result: files }),
+            [dispatch]
+        );
+        const setDragData = useCallback(
+            (data: SameType<boolean, 'active' | 'reject'>) =>
+                dispatch({ type: 'setDragData', dragData: data }),
+            [dispatch]
+        );
 
         const generateUID = overrides?.uidGenerator ?? guid;
         const formatSize = overrides?.fileSizeFormatter ?? internalFileSizeFormatter;
@@ -476,10 +492,13 @@ const FileManager = forwardRef(
             })
         );
 
-        const openFileDialog = () =>
-            !(disabled || readOnly || isLoading) &&
-            !(uploadInOneRequest && isUploading) &&
-            ((fileInputRef.current.value = null), fileInputRef.current.click());
+        const openFileDialog = useCallback(
+            () =>
+                !(disabled || readOnly || isLoading) &&
+                !(uploadInOneRequest && isUploading) &&
+                ((fileInputRef.current.value = null), fileInputRef.current.click()),
+            [disabled, readOnly, isLoading, uploadInOneRequest, isUploading, fileInputRef]
+        );
 
         const removeAllLocalFiles = () =>
             !(disabled || readOnly || isLoading) &&
@@ -489,216 +508,237 @@ const FileManager = forwardRef(
             );
 
         // Opens the file dialog when SPACE/ENTER occurs on the dropzone
-        const onKeyDown = (event: KeyboardEvent) => {
-            // Ignore keyboard events bubbling up the DOM tree
-            if (!rootRef.current || !rootRef.current.isEqualNode(event.target as Node)) {
-                return;
-            }
-
-            // if (event.keyCode === 32 || event.keyCode === 13) {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                openFileDialog();
-            }
-        };
-
-        // ------------------------ UPLOADING PROCESS --------------------------------
-
-        const updateLocalFileData = (
-            data: Partial<ILocalFileData>,
-            uid: string | null = null,
-            files: ILocalFileData[] = localFiles
-        ) => {
-            files.forEach((item) => {
-                if (!uid || uid === item.uid) Object.assign(item, data);
-            });
-            forceUpdate();
-        };
-
-        const runUploadProgressListener = (files: ILocalFileData[] = localFiles) => {
-            uploadProgressData.current.cancelUploadFunc = () =>
-                files.map((file) => file.cancelUpload).forEach((f) => f && f());
-
-            if (uploadProgressData.current.intervalId)
-                clearInterval(uploadProgressData.current.intervalId);
-
-            uploadProgressData.current.intervalId = window.setInterval(() => {
-                if (!dataRef.current.isMounted) {
-                    clearInterval(uploadProgressData.current.intervalId);
+        const onKeyDown = useCallback(
+            (event: KeyboardEvent) => {
+                // Ignore keyboard events bubbling up the DOM tree
+                if (!rootRef.current || !rootRef.current.isEqualNode(event.target as Node)) {
                     return;
                 }
 
-                let uploaded = 0,
-                    total = 0;
-                files.forEach((file) => {
-                    if (['uploading', 'uploaded'].includes(file.state)) {
-                        uploaded += file.uploadedSize;
-                        total += file.totalSize;
+                // if (event.keyCode === 32 || event.keyCode === 13) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openFileDialog();
+                }
+            },
+            [rootRef, openFileDialog]
+        );
+
+        // ---------------------------------------------------------------------------
+
+        const getUploadErrorId = (error: any): TErrorCodes =>
+            error.type === 'abort'
+                ? 'upload_aborted'
+                : error.type === 'timeout'
+                ? 'upload_timeout'
+                : error.type === 'wrong_result'
+                ? 'upload_wrong_result'
+                : 'upload_error';
+
+        const throwError: TThrowError = useCallback(
+            (errorId, message, data) =>
+                onError && onError({ errorId, message, ...(data ? { data } : {}) }),
+            [onError]
+        );
+
+        const handleUploadErrors = useCallback(
+            (error: TUploadError | TUploadError[]) => {
+                if (Array.isArray(error)) {
+                    if (error.length > 1 && onError) onError(error as TInternalError[]);
+                    else throwError(error[0].errorId, error[0].message, error[0].data);
+                } else throwError(error.errorId, error.message, error.data);
+            },
+            [onError, throwError]
+        );
+
+        // ------------------------ UPLOADING PROCESS --------------------------------
+
+        const updateLocalFileData = useCallback(
+            (
+                data: Partial<ILocalFileData>,
+                uid: string | null = null,
+                files: ILocalFileData[] = localFiles
+            ) => {
+                files.forEach((item) => {
+                    if (!uid || uid === item.uid) Object.assign(item, data);
+                });
+                forceUpdate();
+            },
+            [forceUpdate, localFiles]
+        );
+
+        const runUploadProgressListener = useCallback(
+            (files: ILocalFileData[] = localFiles) => {
+                uploadProgressData.current.cancelUploadFunc = () =>
+                    files.map((file) => file.cancelUpload).forEach((f) => f && f());
+
+                if (uploadProgressData.current.intervalId)
+                    clearInterval(uploadProgressData.current.intervalId);
+
+                uploadProgressData.current.intervalId = window.setInterval(() => {
+                    if (!dataRef.current.isMounted) {
+                        clearInterval(uploadProgressData.current.intervalId);
+                        return;
                     }
+
+                    let uploaded = 0,
+                        total = 0;
+                    files.forEach((file) => {
+                        if (['uploading', 'uploaded'].includes(file.state)) {
+                            uploaded += file.uploadedSize;
+                            total += file.totalSize;
+                        }
+                    });
+
+                    const progress = (uploaded / total) * 100;
+
+                    if (onUploadProgress) onUploadProgress(progress, uploaded, total);
+
+                    // Clean up
+                    if (uploadProgressData.current.requests === 0) {
+                        clearInterval(uploadProgressData.current.intervalId);
+                        uploadProgressData.current.intervalId = null;
+                        uploadProgressData.current.cancelUploadFunc = null;
+                        setIsUploading(false);
+                        if (onUploadProgress) onUploadProgress(null, 0, 0);
+                    }
+                }, 100);
+            },
+            [setIsUploading, onUploadProgress, localFiles]
+        );
+
+        const createSingleFileUploadPromise = useCallback(
+            <T extends boolean>(
+                fileData: ILocalFileData,
+                uploadParams: TUploadParams,
+                standalone: T,
+                files: ILocalFileData[] = localFiles
+            ): T extends true ? void : Promise<unknown> => {
+                if (standalone && fileData.state === 'uploading') return null;
+
+                const uploadItem = dataRef.current.uploadingFiles.find(
+                    (item) => item.fileData === fileData
+                );
+                const isInUploadBundle = !!uploadItem;
+
+                const {
+                    URL,
+                    method,
+                    headers,
+                    fileFieldName,
+                    fields = {},
+                    body,
+                    timeout,
+                    processResponse,
+                    checkResult,
+                    processError,
+                } = uploadParams;
+
+                uploadProgressData.current.requests++;
+
+                const formData = new FormData();
+                formData.append(fileFieldName || 'file', fileData.file);
+                for (const field of Object.keys(fields)) formData.append(field, fields[field]);
+
+                const updateFileData = (data: Partial<ILocalFileData>) =>
+                    updateLocalFileData(data, fileData.uid, files);
+
+                updateFileData({ state: 'uploading' });
+
+                let { xhr, promise } = submitFormData(URL, body || formData, {
+                    method,
+                    headers,
+                    timeout,
+                    onProgress: (e: ProgressEvent) => {
+                        updateFileData({
+                            totalSize: e.total,
+                            uploadedSize: e.loaded,
+                        });
+                    },
                 });
 
-                const progress = (uploaded / total) * 100;
+                promise = promise
+                    .then(async (response) => {
+                        const processedResponse = processResponse
+                            ? processResponse(response)
+                            : response;
 
-                if (onUploadProgress) onUploadProgress(progress, uploaded, total);
+                        if (checkResult && !checkResult(processedResponse))
+                            return Promise.reject({
+                                type: 'wrong_result',
+                                message: errorTxtUploadedFileFailedValidation,
+                            });
 
-                // Clean up
-                if (uploadProgressData.current.requests === 0) {
-                    clearInterval(uploadProgressData.current.intervalId);
-                    uploadProgressData.current.intervalId = null;
-                    uploadProgressData.current.cancelUploadFunc = null;
-                    setIsUploading(false);
-                    if (onUploadProgress) onUploadProgress(null, 0, 0);
-                }
-            }, 100);
-        };
+                        const remoteFile = (
+                            await processUploadedFiles(
+                                processedResponse,
+                                fileData !== processedResponse,
+                                true
+                            )
+                        )[0];
 
-        const obtainUploadParams = async (fileData: ILocalFileData | ILocalFileData[]) => {
-            const uploadParams =
-                (!!getUploadParams && (await getUploadParams(fileData))) ?? ({} as TUploadParams);
-            const { URL } = uploadParams;
-
-            if (!URL) {
-                setIsUploading(false);
-                throw Error(errorTxtWrongUploadParams);
-            }
-            return uploadParams;
-        };
-
-        const uploadSingleFile = async (fileData: ILocalFileData) => {
-            setIsUploading(true);
-            const uploadParams = await obtainUploadParams(fileData);
-            return createSingleFileUploadPromise(fileData, uploadParams, true);
-        };
-
-        const createSingleFileUploadPromise = <T extends boolean>(
-            fileData: ILocalFileData,
-            uploadParams: TUploadParams,
-            standalone: T,
-            files: ILocalFileData[] = localFiles
-        ): T extends true ? void : Promise<unknown> => {
-            if (standalone && fileData.state === 'uploading') return null;
-
-            const uploadItem = dataRef.current.uploadingFiles.find(
-                (item) => item.fileData === fileData
-            );
-            const isInUploadBundle = !!uploadItem;
-
-            const {
-                URL,
-                method,
-                headers,
-                fileFieldName,
-                fields = {},
-                body,
-                timeout,
-                processResponse,
-                checkResult,
-                processError,
-            } = uploadParams;
-
-            uploadProgressData.current.requests++;
-
-            const formData = new FormData();
-            formData.append(fileFieldName || 'file', fileData.file);
-            for (const field of Object.keys(fields)) formData.append(field, fields[field]);
-
-            const updateFileData = (data: Partial<ILocalFileData>) =>
-                updateLocalFileData(data, fileData.uid, files);
-
-            updateFileData({ state: 'uploading' });
-
-            let { xhr, promise } = submitFormData(URL, body || formData, {
-                method,
-                headers,
-                timeout,
-                onProgress: (e: ProgressEvent) => {
-                    updateFileData({
-                        totalSize: e.total,
-                        uploadedSize: e.loaded,
-                    });
-                },
-            });
-
-            promise = promise
-                .then(async (response) => {
-                    const processedResponse = processResponse
-                        ? processResponse(response)
-                        : response;
-
-                    if (checkResult && !checkResult(processedResponse))
-                        return Promise.reject({
-                            type: 'wrong_result',
-                            message: errorTxtUploadedFileFailedValidation,
+                        updateFileData({
+                            state: 'uploaded',
+                            shouldBeRemoved: true,
                         });
 
-                    const remoteFile = (
-                        await processUploadedFiles(
-                            processedResponse,
-                            fileData !== processedResponse,
-                            true
-                        )
-                    )[0];
+                        if (onFilesUploaded) {
+                            if (remoteFile) {
+                                remoteFile.elementRef = getElementRefById(remoteFile.uid);
+                                onFilesUploaded([remoteFile]);
+                            } else onFilesUploaded([fileData]);
+                        }
 
-                    updateFileData({
-                        state: 'uploaded',
-                        shouldBeRemoved: true,
+                        if (standalone && !isInUploadBundle) return null;
+                        return Promise.resolve(processedResponse);
+                    })
+                    .catch((error) => {
+                        if (!dataRef.current.isMounted) return null;
+
+                        updateFileData({
+                            totalSize: 0,
+                            uploadedSize: 0,
+                            state: 'uploadError',
+                        });
+
+                        const result = {
+                            message: !!processError ? processError(error) : error,
+                            data: fileData,
+                            errorId: getUploadErrorId(error),
+                        };
+
+                        if (standalone && !isInUploadBundle) {
+                            handleUploadErrors(result);
+                            return null;
+                        }
+
+                        return (
+                            Promise.reject(result)
+                                // To prevent "uncaught (in promise)" error,
+                                // we should only throw an error if this promise is handled by the main uploading process
+                                .catch((e) => {
+                                    if (dataRef.current.uploadPromises.includes(promise)) {
+                                        throw e;
+                                    }
+                                })
+                        );
+                    })
+                    .finally(() => {
+                        fileData.cancelUpload = null;
+                        uploadProgressData.current.requests--;
                     });
 
-                    if (onFilesUploaded) {
-                        if (remoteFile) {
-                            remoteFile.elementRef = getElementRefById(remoteFile.uid);
-                            onFilesUploaded([remoteFile]);
-                        } else onFilesUploaded([fileData]);
-                    }
+                if (uploadItem) uploadItem.promise = makeQueryablePromise(promise);
+                fileData.cancelUpload = () => xhr.abort();
 
-                    if (standalone && !isInUploadBundle) return null;
-                    return Promise.resolve(processedResponse);
-                })
-                .catch((error) => {
-                    if (!dataRef.current.isMounted) return null;
-
-                    updateFileData({
-                        totalSize: 0,
-                        uploadedSize: 0,
-                        state: 'uploadError',
-                    });
-
-                    const result = {
-                        message: !!processError ? processError(error) : error,
-                        data: fileData,
-                        errorId: getUploadErrorId(error),
-                    };
-
-                    if (standalone && !isInUploadBundle) {
-                        handleUploadErrors(result);
-                        return null;
-                    }
-
-                    return (
-                        Promise.reject(result)
-                            // To prevent "uncaught (in promise)" error,
-                            // we should only throw an error if this promise is handled by the main uploading process
-                            .catch((e) => {
-                                if (dataRef.current.uploadPromises.includes(promise)) {
-                                    throw e;
-                                }
-                            })
-                    );
-                })
-                .finally(() => {
-                    fileData.cancelUpload = null;
-                    uploadProgressData.current.requests--;
-                });
-
-            if (uploadItem) uploadItem.promise = makeQueryablePromise(promise);
-            fileData.cancelUpload = () => xhr.abort();
-
-            if (standalone) {
-                runUploadProgressListener();
-                return null;
-            }
-            return promise as any;
-        };
+                if (standalone) {
+                    runUploadProgressListener();
+                    return null;
+                }
+                return promise as any;
+            },
+            [updateLocalFileData, runUploadProgressListener, onFilesUploaded, handleUploadErrors]
+        );
 
         const handleFileUploadPromises = async (
             uploadPromises: Promise<unknown>[],
@@ -760,6 +800,32 @@ const FileManager = forwardRef(
 
             return Promise.resolve(retVal);
         };
+
+        const obtainUploadParams = useCallback(
+            async (fileData: ILocalFileData | ILocalFileData[]) => {
+                const uploadParams =
+                    !!getUploadParams && typeof getUploadParams === 'function'
+                        ? await getUploadParams(fileData)
+                        : ({} as TUploadParams);
+                const { URL } = uploadParams;
+
+                if (!URL) {
+                    setIsUploading(false);
+                    throw Error(errorTxtWrongUploadParams);
+                }
+                return uploadParams;
+            },
+            [setIsUploading, getUploadParams]
+        );
+
+        const uploadSingleFile = useCallback(
+            async (fileData: ILocalFileData) => {
+                setIsUploading(true);
+                const uploadParams = await obtainUploadParams(fileData);
+                return createSingleFileUploadPromise(fileData, uploadParams, true);
+            },
+            [setIsUploading, obtainUploadParams, createSingleFileUploadPromise]
+        );
 
         const uploadFilesSeparately = async (files: ILocalFileData[]) => {
             if (!files.length) return Promise.resolve();
@@ -902,22 +968,6 @@ const FileManager = forwardRef(
                 });
         };
 
-        const getUploadErrorId = (error: any): TErrorCodes =>
-            error.type === 'abort'
-                ? 'upload_aborted'
-                : error.type === 'timeout'
-                ? 'upload_timeout'
-                : error.type === 'wrong_result'
-                ? 'upload_wrong_result'
-                : 'upload_error';
-
-        const handleUploadErrors = (error: TUploadError | TUploadError[]) => {
-            if (Array.isArray(error)) {
-                if (error.length > 1 && onError) onError(error as TInternalError[]);
-                else throwError(error[0].errorId, error[0].message, error[0].data);
-            } else throwError(error.errorId, error.message, error.data);
-        };
-
         const upload = () => {
             if (readOnly || disabled) return Promise.resolve();
             return immediateUpload(localFiles);
@@ -934,9 +984,6 @@ const FileManager = forwardRef(
 
         // ---------------------------------------------------------------------------
 
-        const throwError: TThrowError = (errorId, message, data) =>
-            onError && onError({ errorId, message, ...(data ? { data } : {}) });
-
         const getElementRefById = (uid: string) => {
             const { current: elements } = itemRefs;
             const elementRef =
@@ -944,112 +991,116 @@ const FileManager = forwardRef(
             return elementRef;
         };
 
-        const changeFileStack = (result: ILocalFileData[], changedFiles: ILocalFileData[]) => {
-            if (!changedFiles.length) return;
-            setLocalFiles(result);
-            if (onChangeLocalFileStack) {
-                setTimeout(() => {
-                    result.forEach((item) => (item.elementRef = getElementRefById(item.uid)));
-                    changedFiles.forEach((item) => (item.elementRef = getElementRefById(item.uid)));
-                    onChangeLocalFileStack(result, changedFiles);
-                });
-            }
-        };
+        const changeFileStack = useCallback(
+            (result: ILocalFileData[], changedFiles: ILocalFileData[]) => {
+                if (!changedFiles.length) return;
+                setLocalFiles(result);
+                if (onChangeLocalFileStack) {
+                    setTimeout(() => {
+                        result.forEach((item) => (item.elementRef = getElementRefById(item.uid)));
+                        changedFiles.forEach(
+                            (item) => (item.elementRef = getElementRefById(item.uid))
+                        );
+                        onChangeLocalFileStack(result, changedFiles);
+                    });
+                }
+            },
+            [setLocalFiles, onChangeLocalFileStack]
+        );
 
-        const deleteLocalFile = (fileData: ILocalFileData | ILocalFileData[]) =>
-            changeFileStack(
-                localFiles.filter((file) =>
-                    Array.isArray(fileData) ? !fileData.includes(file) : file.uid != fileData.uid
+        const deleteLocalFile = useCallback(
+            (fileData: ILocalFileData | ILocalFileData[]) =>
+                changeFileStack(
+                    localFiles.filter((file) =>
+                        Array.isArray(fileData)
+                            ? !fileData.includes(file)
+                            : file.uid != fileData.uid
+                    ),
+                    Array.isArray(fileData) ? fileData : [fileData]
                 ),
-                Array.isArray(fileData) ? fileData : [fileData]
-            );
+            [changeFileStack, localFiles]
+        );
 
         const getDeleteUploadedFileFunc = useCallback(
-            () =>
-                !readOnly && !!deleteFile
-                    ? (fileData: ILocalFileData) =>
-                          deleteFile(
-                              ((fileData.elementRef = getElementRefById(fileData.uid)), fileData)
-                          )
-                              .then(() =>
-                                  setRemoteFiles((files) =>
-                                      files.filter((file) => file.uid !== fileData.uid)
-                                  )
+            !readOnly && !!deleteFile
+                ? (fileData: IRemoteFileData) =>
+                      deleteFile(
+                          ((fileData.elementRef = getElementRefById(fileData.uid)), fileData)
+                      )
+                          .then(() =>
+                              setRemoteFiles((files) =>
+                                  files.filter((file) => file.uid !== fileData.uid)
                               )
-                              .catch((message: string | void) => {
-                                  if (!message) return;
-                                  setRemoteFiles((files) =>
-                                      files.map((file) => ({
-                                          ...file,
-                                          ...(file.uid === fileData.uid
-                                              ? { state: 'deletionError' }
-                                              : {}),
-                                      }))
-                                  );
-                                  throwError('delete_error', message, { file: fileData });
-                              })
-                    : null,
-            [readOnly, deleteFile]
+                          )
+                          .catch((message: string | void) => {
+                              if (!message) return;
+                              setRemoteFiles((files) =>
+                                  files.map((file) => ({
+                                      ...file,
+                                      ...(file.uid === fileData.uid
+                                          ? { state: 'deletionError' }
+                                          : {}),
+                                  }))
+                              );
+                              throwError('delete_error', message, { file: fileData });
+                          })
+                : null,
+            [readOnly, setRemoteFiles, deleteFile]
         );
 
         const getDownloadFileFunc = useCallback(
-            () =>
-                !!downloadFile
-                    ? (fileData: ILocalFileData) =>
-                          downloadFile(
-                              ((fileData.elementRef = getElementRefById(fileData.uid)), fileData)
+            !!downloadFile
+                ? (fileData: IRemoteFileData) =>
+                      downloadFile(
+                          ((fileData.elementRef = getElementRefById(fileData.uid)), fileData)
+                      )
+                          .then((resp) => {
+                              if (resp instanceof Blob) {
+                                  saveBlob(resp as Blob, fileData.description || fileData.fileName);
+                              } else if (resp && (resp as { fileName: string }).fileName) {
+                                  saveBlob(resp.blob, resp.fileName);
+                              } else {
+                              } // do nothing....
+                          })
+                          .catch((message: string) =>
+                              throwError('download_error', message, { file: fileData })
                           )
-                              .then((resp) => {
-                                  if (resp instanceof Blob) {
-                                      saveBlob(
-                                          resp as Blob,
-                                          fileData.description || fileData.fileName
-                                      );
-                                  } else if (resp && (resp as { fileName: string }).fileName) {
-                                      saveBlob(resp.blob, resp.fileName);
-                                  } else {
-                                  } // do nothing....
-                              })
-                              .catch((message: string) =>
-                                  throwError('download_error', message, { file: fileData })
-                              )
-                    : null,
+                : null,
             [downloadFile]
         );
 
         const getViewFileFunc = useCallback(
-            () =>
-                !!viewFile
-                    ? (fileData: ILocalFileData) =>
-                          viewFile(
-                              ((fileData.elementRef = getElementRefById(fileData.uid)), fileData)
+            !!viewFile
+                ? (fileData: IRemoteFileData) =>
+                      viewFile(((fileData.elementRef = getElementRefById(fileData.uid)), fileData))
+                          .then((resp) => {
+                              if (resp instanceof Blob) {
+                                  openBlob(resp as Blob, fileData.description || fileData.fileName);
+                              } else {
+                              } // do nothing....
+                          })
+                          .catch((message: string) =>
+                              throwError('view_error', message, { file: fileData })
                           )
-                              .then((resp) => {
-                                  if (resp instanceof Blob) {
-                                      openBlob(
-                                          resp as Blob,
-                                          fileData.description || fileData.fileName
-                                      );
-                                  } else {
-                                  } // do nothing....
-                              })
-                              .catch((message: string) =>
-                                  throwError('view_error', message, { file: fileData })
-                              )
-                    : null,
+                : null,
             [viewFile]
         );
 
-        const updateRemoteFileData = (
-            input: Partial<IRemoteFileData> | ((item: IRemoteFileData) => IRemoteFileData),
-            uid: string
-        ) => {
-            const update =
-                typeof input === 'function'
-                    ? (item: IRemoteFileData) => input(item)
-                    : (item: IRemoteFileData) => ({ ...item, ...input });
-            setRemoteFiles(remoteFiles.map((item) => (item.uid === uid ? update(item) : item)));
-        };
+        const updateRemoteFileData = useCallback(
+            (
+                input: Partial<IRemoteFileData> | ((item: IRemoteFileData) => IRemoteFileData),
+                uid: string
+            ) => {
+                const update =
+                    typeof input === 'function'
+                        ? (item: IRemoteFileData) => input(item)
+                        : (item: IRemoteFileData) => ({ ...item, ...input });
+                setRemoteFiles((remoteFiles) =>
+                    remoteFiles.map((item) => (item.uid === uid ? update(item) : item))
+                );
+            },
+            [setRemoteFiles]
+        );
 
         const getFileItems = () => {
             const fileItems: IFileItemProps[] = [];
@@ -1093,11 +1144,12 @@ const FileManager = forwardRef(
                     fileData,
                     throwError,
                     deleteFile:
-                        (!(fileData.readOnly || readOnly) && getDeleteUploadedFileFunc()) || null,
-                    downloadFile: getDownloadFileFunc(),
-                    viewFile: getViewFileFunc(),
-                    setFileDescription:
-                        (!(fileData.readOnly || readOnly) && setFileDescription) || null,
+                        (!(fileData.readOnly || readOnly) && getDeleteUploadedFileFunc) || null,
+                    downloadFile: getDownloadFileFunc,
+                    viewFile: getViewFileFunc,
+                    setFileDescription: !(fileData.readOnly || readOnly)
+                        ? setFileDescription
+                        : null,
                     updateFileData: updateRemoteFileData,
                     showProgress: false,
                     isLocalFile: false,
@@ -1110,7 +1162,8 @@ const FileManager = forwardRef(
                 fileItems.push({
                     fileData,
                     uploadFile:
-                        (!uploadInOneRequest && ((fileData) => uploadSingleFile(fileData))) || null,
+                        // (!uploadInOneRequest && ((fileData) => uploadSingleFile(fileData))) || null,
+                        (!uploadInOneRequest && uploadSingleFile) || null,
                     deleteFile: (fileData.state !== 'uploading' && deleteLocalFile) || null,
                     updateFileData: (addFileDescription && updateLocalFileData) || null,
                     showProgress:
@@ -1275,19 +1328,22 @@ const FileManager = forwardRef(
 
         /**************************** Drag & drop *********************************/
 
-        const onDragEnter = (e: React.DragEvent<HTMLElement>) => {
-            e.preventDefault();
-            e.stopPropagation();
+        const onDragEnter = useCallback(
+            (e: React.DragEvent<HTMLElement>) => {
+                e.preventDefault();
+                e.stopPropagation();
 
-            if (!isEventWithFiles(e)) return;
+                if (!isEventWithFiles(e)) return;
 
-            dataRef.current.dragTargetElement = e.target;
+                dataRef.current.dragTargetElement = e.target;
 
-            setDragData({
-                active: true,
-                reject: isDragReject(e, accept),
-            });
-        };
+                setDragData({
+                    active: true,
+                    reject: isDragReject(e, accept),
+                });
+            },
+            [setDragData, isDragReject]
+        );
 
         const onDragLeave = (e: React.DragEvent<HTMLElement>) => {
             // https://stackoverflow.com/a/26459269/925504
@@ -1710,13 +1766,19 @@ FileManager.propTypes = {
                     style: PropTypes.object,
                 })
             ),
-            thumbnail: PropTypes.func,
-            fileName: PropTypes.func,
-            fileSize: PropTypes.func,
-            actionMenu: PropTypes.func,
-            buttons: PropTypes.func,
-            progressBar: PropTypes.func,
-            readOnlyLabel: PropTypes.func,
+            thumbnailFieldStyles: PropTypes.func,
+            thumbnailFieldComponent: PropTypes.func,
+            inputFieldStyles: PropTypes.func,
+            inputFieldComponent: PropTypes.func,
+            sizeFieldStyle: PropTypes.func,
+            sizeFieldComponent: PropTypes.func,
+            controlField: PropTypes.exact({
+                buttons: PropTypes.func,
+                menu: PropTypes.func,
+                component: PropTypes.func,
+            }),
+            progressBarComponent: PropTypes.func,
+            readOnlyIconComponent: PropTypes.func,
             component: PropTypes.func,
         }),
     }),

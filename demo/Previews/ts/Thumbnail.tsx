@@ -3,7 +3,7 @@ import React, { useRef, useState } from 'react';
 import { CircularProgress } from '@material-ui/core';
 
 import '../styles.scss';
-import { IFileData, TThumbnail } from '../../../src/lib';
+import { IFileData, TThumbnailFieldComponent } from '../../../src/lib';
 
 const formatDuration = (sec: number) => (
     (sec = sec ? sec : 0), new Date(sec * 1000).toISOString().substr(11, 8)
@@ -98,7 +98,7 @@ const AudioThumbnail = ({ uid, src, duration }: { uid: string; src: string; dura
     );
 };
 
-const CustomFileItemThumbnail: TThumbnail = ({ fileData, readOnly, disabled }) => {
+const CustomFileItemThumbnail: TThumbnailFieldComponent = ({ fileData, readOnly, disabled }) => {
     const type =
         fileData.fileType ||
         fileData?.file?.type?.split('/')?.pop()?.toUpperCase() ||

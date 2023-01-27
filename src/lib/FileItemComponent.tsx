@@ -1,10 +1,13 @@
 import React, { FC, ReactElement, ReactNode, useCallback, useEffect, useRef } from 'react';
+import { IAudioThumbnailProps } from './Components';
 
 import { TThrowError } from './Utils/errors';
 import { TStyle, SameType, TComponent, ExtractKeys } from './Utils/types';
 
 // internal state of a file item (0 - initial, 1 - uploading, 2 - uploaded, 3 - upload error, 4 - deletion error)
 export type TFileItemState = 'initial' | 'uploading' | 'uploaded' | 'uploadError' | 'deletionError';
+
+export type TFileSizeFormatter = (size: number) => string;
 
 export interface IFileData {
     uid?: string;
@@ -37,14 +40,14 @@ export interface ILocalFileData extends IRemoteFileData {
 }
 
 export interface IItemActions {
-    changeDescription: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    undoDescriptionChanges: () => void;
-    changeDescriptionMode: () => void;
-    confirmDescriptionChanges: () => Promise<void>;
-    deleteFile: (fileData: IRemoteFileData | ILocalFileData) => void;
+    changeDescription?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    undoDescriptionChanges?: () => void;
+    changeDescriptionMode?: () => void;
+    confirmDescriptionChanges?: () => Promise<void>;
+    deleteFile?: (fileData: IRemoteFileData | ILocalFileData) => void;
     uploadFile?: (fileData: ILocalFileData) => void;
-    downloadFile: (fileData: IRemoteFileData) => void;
-    viewFile: (fileData: IRemoteFileData) => void;
+    downloadFile?: (fileData: IRemoteFileData) => void;
+    viewFile?: (fileData: IRemoteFileData) => void;
 }
 
 export interface IItemProps {
@@ -65,7 +68,7 @@ export interface IItemCommonProps {
     noKeyboard: boolean;
 }
 
-export interface ITextFieldProps {
+export interface IInputFieldProps {
     id: string;
     value: string;
     title: string;
@@ -77,7 +80,7 @@ export interface ITextFieldProps {
 
 export interface IFileItemComponentProps {
     fileData: Readonly<ILocalFileData>;
-    getTextFieldProps: () => ITextFieldProps;
+    getInputFieldProps: () => IInputFieldProps;
     getItemProps: () => IItemProps;
     getCommonProps: () => IItemCommonProps;
     getActions: () => IItemActions;
@@ -90,13 +93,42 @@ type TOverriddenFileItemFuncProps = {
     disabled: boolean;
 };
 
-export type TFileSize = (props: TOverriddenFileItemFuncProps) => TStyle;
-export type TThumbnail = (props: TOverriddenFileItemFuncProps) => ReactElement;
-export type TFileName = (props: TOverriddenFileItemFuncProps) => {
+interface IThumbnailStyles {
+    container?: React.CSSProperties;
+    type?: React.CSSProperties;
+    loading?: React.CSSProperties;
+    audio?: IAudioThumbnailProps['styles'];
+    image?: React.CSSProperties;
+    duration?: React.CSSProperties;
+    default?: React.CSSProperties;
+}
+
+export interface IInputFieldComponentProps {
+    fileData: ILocalFileData;
+    readOnly: boolean;
+    disabled: boolean;
+    changeDescription: IItemActions['changeDescription'];
+    changeDescriptionMode: IItemActions['changeDescriptionMode'];
+    confirmDescriptionChanges: IItemActions['confirmDescriptionChanges'];
+    undoDescriptionChanges: IItemActions['undoDescriptionChanges'];
+    getInputFieldProps: () => IInputFieldProps;
+}
+
+export type TThumbnailFieldStyles = (props: TOverriddenFileItemFuncProps) => IThumbnailStyles;
+export type TThumbnailFieldComponent = (props: TOverriddenFileItemFuncProps) => ReactElement;
+
+export type TInputFieldStyles = (props: TOverriddenFileItemFuncProps) => {
     readOnlyText?: TStyle;
     textField?: TStyle;
 };
-export type TActionMenu = (props: TOverriddenFileItemFuncProps) => {
+export type TInputFieldComponent = TComponent<IInputFieldComponentProps>;
+
+export type TSizeFieldStyle = (props: TOverriddenFileItemFuncProps) => TStyle;
+export type TSizeFieldComponent = (
+    props: TOverriddenFileItemFuncProps & { formatSize: TFileSizeFormatter }
+) => ReactElement;
+
+export type TControlFieldMenu = (props: TOverriddenFileItemFuncProps) => {
     buttonProps?: TButtonProps;
     buttonChildren?: ReactNode;
     menuStyles?: {
@@ -108,18 +140,28 @@ export type TActionMenu = (props: TOverriddenFileItemFuncProps) => {
     displayIcons?: boolean;
 };
 type TButton = { props?: TButtonProps; children?: ReactNode };
-export type TButtons = (
-    props: TOverriddenFileItemFuncProps & { uploadFilesInOneRequestMode: boolean }
-) => {
+export type TControlFieldButtons = (props: TOverriddenFileItemFuncProps) => {
     uploadFile?: TButton;
     cancelUpload?: TButton;
     removeLocalFile?: TButton;
     confirmDescription?: TButton;
     undoDescription?: TButton;
-    stub?: ReactNode;
+    loadingIcon?: ReactNode;
 };
-export type TProgressBar = (progress: number) => ReactElement;
-export type TReadOnlyLabel = () => ReactElement;
+export type TControlFieldComponent = (
+    props: TOverriddenFileItemFuncProps &
+        IItemActions & {
+            noKeyboard: boolean;
+        }
+) => ReactElement;
+
+export type TControlField = {
+    buttons?: TControlFieldButtons;
+    menu?: TControlFieldMenu;
+    component?: TControlFieldComponent;
+};
+export type TProgressBarComponent = (progress: number) => ReactElement;
+export type TReadOnlyIconComponent = () => ReactElement;
 export type TMenuItemNames = Partial<
     SameType<string, 'menuItemView' | 'menuItemDownload' | 'menuItemRename' | 'menuItemDelete'>
 >;
@@ -140,16 +182,26 @@ export type TFileItemRootStyles = Partial<SameType<TStyle, ExtractKeys<typeof de
 
 export interface IOverriddenFileItem {
     rootStyles?: TFileItemRootStyles;
-    thumbnail?: TThumbnail;
-    fileName?: TFileName;
-    fileSize?: TFileSize;
-    actionMenu?: TActionMenu;
-    buttons?: TButtons;
-    progressBar?: TProgressBar;
-    readOnlyLabel?: TReadOnlyLabel;
     titles?: TTitles;
+
+    thumbnailFieldStyles?: TThumbnailFieldStyles;
+    thumbnailFieldComponent?: TThumbnailFieldComponent;
+
+    inputFieldStyles?: TInputFieldStyles;
+    inputFieldComponent?: TInputFieldComponent;
+
+    sizeFieldStyle?: TSizeFieldStyle;
+    sizeFieldComponent?: TSizeFieldComponent;
+
+    controlField?: TControlField;
+
+    progressBarComponent?: TProgressBarComponent;
+    readOnlyIconComponent?: TReadOnlyIconComponent;
+
     component?: TComponent<IFileItemComponentProps>;
 }
+
+// -----------------
 
 export interface IItemMountState {
     fileData: IRemoteFileData | ILocalFileData;
@@ -169,11 +221,11 @@ export interface IFileItemProps {
     root: HTMLDivElement;
     component: TComponent<IFileItemComponentProps>;
     fileData: ILocalFileData;
-    formatSize: (size: number) => string;
+    formatSize: TFileSizeFormatter;
     uploadFile?: (fileData: ILocalFileData) => void;
     deleteFile: (fileData: ILocalFileData) => void;
-    downloadFile?: (fileData: ILocalFileData) => void;
-    viewFile?: (fileData: ILocalFileData) => void;
+    downloadFile?: (fileData: IRemoteFileData) => void;
+    viewFile?: (fileData: IRemoteFileData) => void;
     setFileDescription?: (fileData: ILocalFileData) => Promise<string>;
     updateFileData: (
         input: Partial<IRemoteFileData> | ((item: IRemoteFileData) => IRemoteFileData),
@@ -308,7 +360,13 @@ export const FileItemComponent: FC<IFileItemProps> = ({
                           )
                       )
             : null,
-        [setFileDescription, updateFileData, undoDescriptionChanges, fileData]
+        [
+            setFileDescription,
+            updateFileData,
+            undoDescriptionChanges,
+            fileData.uid,
+            fileData.description,
+        ]
     );
 
     const onFocus = useCallback(
@@ -323,52 +381,82 @@ export const FileItemComponent: FC<IFileItemProps> = ({
 
     // Grouping properties
 
-    const getTextFieldProps = () => ({
-        id: textFieldId,
-        value: fileData.description,
-        title: fileData.fileName,
-        onChange: changeDescription,
-        onKeyUp: (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' && confirmDescriptionChanges) confirmDescriptionChanges();
-            if (e.key === 'Escape' && undoDescriptionChanges) undoDescriptionChanges();
-        },
-        onFocus,
-        onBlur,
-    });
+    const getInputFieldProps = useCallback(
+        () => ({
+            id: textFieldId,
+            value: fileData.description,
+            title: fileData.fileName,
+            onChange: changeDescription,
+            onKeyUp: (e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' && confirmDescriptionChanges) confirmDescriptionChanges();
+                if (e.key === 'Escape' && undoDescriptionChanges) undoDescriptionChanges();
+            },
+            onFocus,
+            onBlur,
+        }),
+        [
+            changeDescription,
+            confirmDescriptionChanges,
+            undoDescriptionChanges,
+            onFocus,
+            onBlur,
+            textFieldId,
+            fileData.fileName,
+            fileData.description,
+        ]
+    );
 
-    const getItemProps = () => ({
-        role: 'fileitem',
-        ref: fileItemRef,
-        id: fileData.uid,
-        key: `fileItemComponent-${fileData.uid}`,
-        onClick: (e: React.MouseEvent) => e.stopPropagation(),
-    });
+    const getItemProps = useCallback(
+        () => ({
+            role: 'fileitem',
+            ref: fileItemRef,
+            id: fileData.uid,
+            key: `fileItemComponent-${fileData.uid}`,
+            onClick: (e: React.MouseEvent) => e.stopPropagation(),
+        }),
+        [fileItemRef, fileData.uid]
+    );
 
-    const getCommonProps = () => ({
-        root,
-        formatSize,
-        isLocalFile,
-        showProgress,
-        readOnly,
-        disabled,
-        isDragActive,
-        noKeyboard,
-    });
+    const getCommonProps = useCallback(
+        () => ({
+            root,
+            formatSize,
+            isLocalFile,
+            showProgress,
+            readOnly,
+            disabled,
+            isDragActive,
+            noKeyboard,
+        }),
+        [root, formatSize, isLocalFile, showProgress, readOnly, disabled, isDragActive, noKeyboard]
+    );
 
-    const getActions = () => ({
-        changeDescription,
-        undoDescriptionChanges,
-        changeDescriptionMode,
-        confirmDescriptionChanges,
-        deleteFile,
-        uploadFile,
-        downloadFile,
-        viewFile,
-    });
+    const getActions = useCallback(
+        () => ({
+            changeDescription,
+            undoDescriptionChanges,
+            changeDescriptionMode,
+            confirmDescriptionChanges,
+            deleteFile,
+            uploadFile,
+            downloadFile,
+            viewFile,
+        }),
+        [
+            changeDescription,
+            undoDescriptionChanges,
+            changeDescriptionMode,
+            confirmDescriptionChanges,
+            deleteFile,
+            uploadFile,
+            downloadFile,
+            viewFile,
+        ]
+    );
 
     return component({
         fileData,
-        getTextFieldProps,
+        getInputFieldProps,
         getItemProps,
         getCommonProps,
         getActions,

@@ -174,14 +174,16 @@ const Component = () => {
                         titles: {
                             menuButtonTitle: 'File actions',
                         },
-                        rootStyles: CustomFileItemRootStyles(),
-                        thumbnail: CustomFileItemThumbnail,
-                        fileName: CustomFileItemNameStyles,
-                        fileSize: CustomFileItemSizeStyle,
-                        actionMenu: CustomActionMenuProps,
-                        buttons: CustomButtonsProps,
-                        progressBar: CustomProgressBar,
-                        readOnlyLabel: CustomReadOnlyLabel,
+                        rootStyles: CustomFileItemRootStyles,
+                        thumbnailFieldComponent: CustomFileItemThumbnail,
+                        inputFieldStyles: CustomFileItemNameStyles,
+                        sizeFieldStyle: CustomFileItemSizeStyle,
+                        controlField: {
+                            menu: CustomActionMenuProps,
+                            buttons: CustomButtonsProps,
+                        },
+                        progressBarComponent: CustomProgressBar,
+                        readOnlyLabelComponent: CustomReadOnlyLabel,
                     },
                 }}
                 // uploadFilesInOneRequest

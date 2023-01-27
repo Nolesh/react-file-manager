@@ -154,7 +154,7 @@ function ActionMenu({
 // Extends custom render function to pass classes
 const renderFileItemWithClasses = ({
     fileData,
-    getTextFieldProps,
+    getInputFieldProps,
     getItemProps,
     getCommonProps,
     getActions,
@@ -265,7 +265,7 @@ const renderFileItemWithClasses = ({
                         fileData.description || fileData.fileName
                     ) : (
                         <TextField
-                            {...getTextFieldProps()}
+                            {...getInputFieldProps()}
                             fullWidth
                             inputProps={{ tabIndex: tabIndex }}
                         />
