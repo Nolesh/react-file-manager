@@ -370,64 +370,12 @@ const FileManager = forwardRef(
             [dispatch]
         );
 
+        const setSortFilesFunc = useCallback((f) => {
+            dataRef.current.onSortFunc = f;
+        }, []);
+
         const generateUID = overrides?.uidGenerator ?? guid;
         const formatSize = overrides?.fileSizeFormatter ?? internalFileSizeFormatter;
-
-        const processUploadedFiles = (
-            remoteFiles: IFileData | IFileData[],
-            useFileFieldMapping = true,
-            append = false
-        ): Promise<IRemoteFileData[]> =>
-            new Promise((resolve) => {
-                remoteFiles = (Array.isArray(remoteFiles) ? remoteFiles : [remoteFiles]).filter(
-                    (file) => file
-                );
-                if (remoteFiles.length === 0) return resolve([]);
-
-                const checkRequiredFileFields = (file: any) => !(!file.fileName || !file.fileSize);
-                const cleanPreviewDataField = (file: IFileData) => {
-                    const { previewData, ...rest } = file;
-                    return !!file?.previewData?.src ? file : rest;
-                };
-
-                // Let's check some fields and add additional fields (e.g. the old description field to be able to discard changes)
-                const processedFiles = remoteFiles.map<IRemoteFileData>((file) => {
-                    const mappedFile =
-                        useFileFieldMapping && fileFieldMapping
-                            ? cleanPreviewDataField(fileFieldMapping(file))
-                            : file;
-                    if (!checkRequiredFileFields(mappedFile))
-                        throw Error(errorTxtInvalidFileFields);
-                    return {
-                        uid: generateUID(),
-                        ...mappedFile,
-                        ...{ oldDescription: file.description || file.fileName, state: 'uploaded' },
-                    };
-                });
-
-                if (append) setRemoteFiles((files) => files.concat(processedFiles));
-                else setRemoteFiles(processedFiles);
-                resolve(processedFiles);
-            });
-
-        const loadUploadedFiles = () => {
-            return new Promise<IRemoteFileData[]>((resolve, reject) => {
-                setIsLoading(true);
-                fetchRemoteFiles()
-                    .then((remoteFiles) => {
-                        if (!dataRef.current.isMounted) return resolve([]);
-                        if (!Array.isArray(remoteFiles)) throw Error(errorTxtUploadedFilesNotArray);
-                        return processUploadedFiles(remoteFiles).then((result) => {
-                            setIsLoading(false);
-                            resolve(result);
-                        });
-                    })
-                    .catch((err) => {
-                        setIsLoading(false);
-                        reject(err);
-                    });
-            });
-        };
 
         useEffect(() => {
             dataRef.current.isMounted = true;
@@ -476,6 +424,36 @@ const FileManager = forwardRef(
                 }
             };
         }, [rootRef, preventDropOnDocument, noDrag]);
+
+        useEffect(() => {
+            const { current: mountStates } = itemMountStates;
+
+            if (onChangeItemMountStates && mountStates.length) {
+                const mounted = mountStates.filter((x) => x.state === 'mount');
+                const unmounted = mountStates.filter((x) => x.state === 'unmount');
+
+                const difference =
+                    mounted.length >= unmounted.length
+                        ? mounted.filter(
+                              (x) =>
+                                  !unmounted.some(
+                                      (y) =>
+                                          y.fileData.uid === x.fileData.uid &&
+                                          y.isLocalFile === x.isLocalFile
+                                  )
+                          )
+                        : unmounted.filter(
+                              (x) =>
+                                  !mounted.some(
+                                      (y) =>
+                                          y.fileData.uid === x.fileData.uid &&
+                                          y.isLocalFile === x.isLocalFile
+                                  )
+                          );
+
+                onChangeItemMountStates(difference, mounted, unmounted);
+            }
+        }, [onChangeItemMountStates, itemMountStates.current]);
 
         useImperativeHandle(
             ref,
@@ -552,6 +530,62 @@ const FileManager = forwardRef(
         );
 
         // ------------------------ UPLOADING PROCESS --------------------------------
+
+        const processUploadedFiles = (
+            remoteFiles: IFileData | IFileData[],
+            useFileFieldMapping = true,
+            append = false
+        ): Promise<IRemoteFileData[]> =>
+            new Promise((resolve) => {
+                remoteFiles = (Array.isArray(remoteFiles) ? remoteFiles : [remoteFiles]).filter(
+                    (file) => file
+                );
+                if (remoteFiles.length === 0) return resolve([]);
+
+                const checkRequiredFileFields = (file: any) => !(!file.fileName || !file.fileSize);
+                const cleanPreviewDataField = (file: IFileData) => {
+                    const { previewData, ...rest } = file;
+                    return !!file?.previewData?.src ? file : rest;
+                };
+
+                // Let's check some fields and add additional fields (e.g. the old description field to be able to discard changes)
+                const processedFiles = remoteFiles.map<IRemoteFileData>((file) => {
+                    const mappedFile =
+                        useFileFieldMapping && fileFieldMapping
+                            ? cleanPreviewDataField(fileFieldMapping(file))
+                            : file;
+                    if (!checkRequiredFileFields(mappedFile))
+                        throw Error(errorTxtInvalidFileFields);
+                    return {
+                        uid: generateUID(),
+                        ...mappedFile,
+                        ...{ oldDescription: file.description || file.fileName, state: 'uploaded' },
+                    };
+                });
+
+                if (append) setRemoteFiles((files) => files.concat(processedFiles));
+                else setRemoteFiles(processedFiles);
+                resolve(processedFiles);
+            });
+
+        const loadUploadedFiles = () => {
+            return new Promise<IRemoteFileData[]>((resolve, reject) => {
+                setIsLoading(true);
+                fetchRemoteFiles()
+                    .then((remoteFiles) => {
+                        if (!dataRef.current.isMounted) return resolve([]);
+                        if (!Array.isArray(remoteFiles)) throw Error(errorTxtUploadedFilesNotArray);
+                        return processUploadedFiles(remoteFiles).then((result) => {
+                            setIsLoading(false);
+                            resolve(result);
+                        });
+                    })
+                    .catch((err) => {
+                        setIsLoading(false);
+                        reject(err);
+                    });
+            });
+        };
 
         const updateLocalFileData = useCallback(
             (
@@ -830,6 +864,8 @@ const FileManager = forwardRef(
         const uploadFilesSeparately = async (files: ILocalFileData[]) => {
             if (!files.length) return Promise.resolve();
 
+            setIsUploading(true);
+
             const uploadPromises = [];
             const uploadingFiles: ILocalFileData[] = [];
             const uploadParams = await obtainUploadParams(files);
@@ -841,9 +877,12 @@ const FileManager = forwardRef(
                 uploadingFiles.push(fileData);
             }
 
-            if (!uploadPromises.length) return Promise.resolve();
+            if (!uploadPromises.length) {
+                setIsUploading(false);
+                return Promise.resolve();
+            }
 
-            setIsUploading(true);
+            // setIsUploading(true);
             runUploadProgressListener(files);
 
             dataRef.current.uploadingFiles = dataRef.current.uploadingFiles.concat(
@@ -1181,44 +1220,40 @@ const FileManager = forwardRef(
             ));
         };
 
-        const sort = useCallback(
-            (fileItems: IFileItemProps[]): IFileItemProps[] => {
-                const isRemoteFileInEditMode = !!remoteFiles.find((file) => file.editMode);
-                const isLocalFileInEditMode = !!localFiles.find((file) => file.editMode);
+        const sort = (fileItems: IFileItemProps[]): IFileItemProps[] => {
+            const isRemoteFileInEditMode = !!remoteFiles.find((file) => file.editMode);
+            const isLocalFileInEditMode = !!localFiles.find((file) => file.editMode);
 
-                if (savedSortOrder.current && (isRemoteFileInEditMode || isLocalFileInEditMode)) {
-                    const { current: sortOrder } = savedSortOrder;
+            if (savedSortOrder.current && (isRemoteFileInEditMode || isLocalFileInEditMode)) {
+                const { current: sortOrder } = savedSortOrder;
 
-                    return fileItems.sort(
-                        (a, b) =>
-                            sortOrder.indexOf(a.fileData.uid) - sortOrder.indexOf(b.fileData.uid)
-                    );
+                return fileItems.sort(
+                    (a, b) => sortOrder.indexOf(a.fileData.uid) - sortOrder.indexOf(b.fileData.uid)
+                );
 
-                    // OR
+                // OR
 
-                    // https://stackoverflow.com/a/31213792/925504
-                    // Map for efficient lookup of sortIndex
-                    // const ordering: {[key: string] : number} = {};
-                    // for (var i=0; i<sortOrder.length; i++) ordering[sortOrder[i]] = i;
-                    // return fileItems.sort((a, b) => ordering[a.fileData.uid] - ordering[b.fileData.uid]);
-                }
+                // https://stackoverflow.com/a/31213792/925504
+                // Map for efficient lookup of sortIndex
+                // const ordering: {[key: string] : number} = {};
+                // for (var i=0; i<sortOrder.length; i++) ordering[sortOrder[i]] = i;
+                // return fileItems.sort((a, b) => ordering[a.fileData.uid] - ordering[b.fileData.uid]);
+            }
 
-                const sortFunc = sortFiles || dataRef.current.onSortFunc;
-                if (sortFunc)
-                    fileItems.sort((a, b) =>
-                        sortFunc(
-                            { isLocalFile: a.isLocalFile, fileData: a.fileData },
-                            { isLocalFile: b.isLocalFile, fileData: b.fileData }
-                        )
-                    );
+            const sortFunc = sortFiles || dataRef.current.onSortFunc;
+            if (sortFunc)
+                fileItems.sort((a, b) =>
+                    sortFunc(
+                        { isLocalFile: a.isLocalFile, fileData: a.fileData },
+                        { isLocalFile: b.isLocalFile, fileData: b.fileData }
+                    )
+                );
 
-                // Preserve the sort order to freeze it during file renaming
-                savedSortOrder.current = fileItems.map((item) => item.fileData.uid);
+            // Preserve the sort order to freeze it during file renaming
+            savedSortOrder.current = fileItems.map((item) => item.fileData.uid);
 
-                return fileItems;
-            },
-            [sortFiles, dataRef.current.onSortFunc, remoteFiles, localFiles]
-        );
+            return fileItems;
+        };
 
         const createFile = (file: File): Promise<ILocalFileData> =>
             new Promise((resolve) => {
@@ -1328,22 +1363,19 @@ const FileManager = forwardRef(
 
         /**************************** Drag & drop *********************************/
 
-        const onDragEnter = useCallback(
-            (e: React.DragEvent<HTMLElement>) => {
-                e.preventDefault();
-                e.stopPropagation();
+        const onDragEnter = (e: React.DragEvent<HTMLElement>) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-                if (!isEventWithFiles(e)) return;
+            if (!isEventWithFiles(e)) return;
 
-                dataRef.current.dragTargetElement = e.target;
+            dataRef.current.dragTargetElement = e.target;
 
-                setDragData({
-                    active: true,
-                    reject: isDragReject(e, accept),
-                });
-            },
-            [setDragData, isDragReject]
-        );
+            setDragData({
+                active: true,
+                reject: isDragReject(e, accept),
+            });
+        };
 
         const onDragLeave = (e: React.DragEvent<HTMLElement>) => {
             // https://stackoverflow.com/a/26459269/925504
@@ -1541,134 +1573,56 @@ const FileManager = forwardRef(
         const isDraggable =
             !(disabled || readOnly || noDrag || isLoading) && !(uploadInOneRequest && isUploading);
 
-        const fileItems = React.useMemo(getFileItems, [
-            localFiles,
-            remoteFiles,
+        const fileItems = getFileItems();
+
+        const getEventProps = (): IRootEventProps => ({
+            onClick: !noClick ? openFileDialog : null,
+            onKeyDown: !noKeyboard ? onKeyDown : null,
+            onDragEnter: isDraggable ? onDragEnter : null,
+            onDragOver: isDraggable ? onDragOver : null,
+            onDragLeave: isDraggable ? onDragLeave : null,
+            onDrop: isDraggable ? onDropFile : null,
+        });
+
+        const args: IRootComponentProps = {
+            componentRef: rootRef,
+            getEventProps,
+            sortFiles: setSortFilesFunc,
+            update: forceUpdate,
+            fileItems,
+            isDragActive: active,
+            isDragReject: reject,
             disabled,
+            isLoading,
+            isUploading,
             readOnly,
-            active,
-            noKeyboard,
-            forceUpdateTrigger,
-            sort,
-            getViewFileFunc,
-            getDownloadFileFunc,
-            getDeleteUploadedFileFunc,
-        ]);
+            tabIndex: !disabled && !noKeyboard ? tabIndex : -1,
+        };
 
-        useEffect(() => {
-            const { current: mountStates } = itemMountStates;
-
-            if (onChangeItemMountStates && mountStates.length) {
-                const mounted = mountStates.filter((x) => x.state === 'mount');
-                const unmounted = mountStates.filter((x) => x.state === 'unmount');
-
-                const difference =
-                    mounted.length >= unmounted.length
-                        ? mounted.filter(
-                              (x) =>
-                                  !unmounted.some(
-                                      (y) =>
-                                          y.fileData.uid === x.fileData.uid &&
-                                          y.isLocalFile === x.isLocalFile
-                                  )
-                          )
-                        : unmounted.filter(
-                              (x) =>
-                                  !mounted.some(
-                                      (y) =>
-                                          y.fileData.uid === x.fileData.uid &&
-                                          y.isLocalFile === x.isLocalFile
-                                  )
-                          );
-
-                onChangeItemMountStates(difference, mounted, unmounted);
-            }
-        }, [fileItems]);
-
-        const getEventProps = useCallback(
-            (): IRootEventProps => ({
-                onClick: !noClick ? openFileDialog : null,
-                onKeyDown: !noKeyboard ? onKeyDown : null,
-                onDragEnter: isDraggable ? onDragEnter : null,
-                onDragOver: isDraggable ? onDragOver : null,
-                onDragLeave: isDraggable ? onDragLeave : null,
-                onDrop: isDraggable ? onDropFile : null,
-            }),
-            [
-                noClick,
-                noKeyboard,
-                isDraggable,
-                openFileDialog,
-                onKeyDown,
-                onDragEnter,
-                onDragOver,
-                onDragLeave,
-                onDropFile,
-            ]
+        const NewRootComponent = overrides?.Root?.component;
+        const rootComponent = NewRootComponent ? (
+            <NewRootComponent {...args} />
+        ) : (
+            <RootComponent {...{ ...args, overrides: overrides?.Root }} />
         );
 
-        const args = useMemo(
-            (): IRootComponentProps => ({
-                componentRef: rootRef,
-                getEventProps,
-                sortFiles: (f) => (dataRef.current.onSortFunc = f),
-                update: forceUpdate,
-                fileItems,
-                isDragActive: active,
-                isDragReject: reject,
-                disabled,
-                isLoading,
-                isUploading,
-                readOnly,
-                tabIndex: !disabled && !noKeyboard ? tabIndex : -1,
-            }),
-            [
-                rootRef,
-                getEventProps,
-                forceUpdate,
-                fileItems,
-                active,
-                reject,
-                disabled,
-                isLoading,
-                isUploading,
-                readOnly,
-                tabIndex,
-                noKeyboard,
-            ]
+        return (
+            <div className="react-file-manager">
+                <input
+                    role="fileinput"
+                    ref={fileInputRef}
+                    type="file"
+                    accept={accept}
+                    style={{ display: 'none' }}
+                    onChange={onChange}
+                    multiple={multiple}
+                    disabled={!!!getUploadParams}
+                    autoComplete="off"
+                    tabIndex={-1}
+                />
+                {rootComponent}
+            </div>
         );
-
-        const rootComponent = useMemo(() => {
-            const NewRootComponent = overrides?.Root?.component;
-            return NewRootComponent ? (
-                <NewRootComponent {...args} />
-            ) : (
-                <RootComponent {...{ ...args, overrides: overrides?.Root }} />
-            );
-        }, [overrides, args]);
-
-        const compositeComponent = useMemo(
-            () => (
-                <div className="react-file-manager">
-                    <input
-                        role="fileinput"
-                        ref={fileInputRef}
-                        type="file"
-                        accept={accept}
-                        style={{ display: 'none' }}
-                        onChange={onChange}
-                        multiple={multiple}
-                        disabled={!!!getUploadParams}
-                        autoComplete="off"
-                        tabIndex={-1}
-                    />
-                    {rootComponent}
-                </div>
-            ),
-            [rootComponent, fileInputRef, accept, onChange, multiple, getUploadParams]
-        );
-
-        return compositeComponent;
     }
 );
 

@@ -9,7 +9,7 @@ export {
     TGetUploadParams,
     TOverrides,
 } from './FileManager';
-export { IRootComponentProps } from './RootComponent';
+export { IRootComponentProps, IOverriddenRoot } from './RootComponent';
 export {
     TTitles,
     IFileItemComponentProps,
@@ -33,6 +33,7 @@ export {
     TFileItemRootStyles,
     TThumbnailFieldStyles,
     TThumbnailFieldComponent,
+    IOverriddenFileItem,
 } from './FileItemComponent';
 export {
     IMenuItem,

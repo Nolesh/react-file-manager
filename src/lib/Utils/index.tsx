@@ -48,19 +48,15 @@ export function openBlob(blob: Blob, windowTitle: string) {
 
 /* istanbul ignore next */
 export function saveBlob(blob: Blob, fileName: string) {
-    if (window.navigator.msSaveOrOpenBlob) {
-        window.navigator.msSaveOrOpenBlob(blob, fileName);
-    } else {
-        const a = document.createElement('a');
-        a.target = '_blank';
-        document.body.appendChild(a);
-        const url = window.URL.createObjectURL(blob);
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => window.URL.revokeObjectURL(url), 0);
-    }
+    const a = document.createElement('a');
+    a.target = '_blank';
+    document.body.appendChild(a);
+    const url = window.URL.createObjectURL(blob);
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => window.URL.revokeObjectURL(url), 0);
 }
 
 export function safePromise<T>(promise: Promise<T>) {
@@ -253,7 +249,13 @@ export const insertIntoObject = (
     return clone;
 };
 
+// ------------------------------------------------------------------
 type Remap<T> = { [P in keyof T & string as `${P}Style`]: T[P] };
+type TMergedResult = {
+    className: string;
+    style: React.CSSProperties;
+};
+type Change<T, R> = { [P in keyof T]: R };
 
 export const mergeStyles = <T extends { [property: string]: string }>(
     defaultClassNames: T,
@@ -262,7 +264,7 @@ export const mergeStyles = <T extends { [property: string]: string }>(
 ): {
     classNames: T;
     styles: SameType<React.CSSProperties, ExtractKeys<T>>;
-    mergedResult: Remap<T>;
+    mergedResult: Change<Remap<T>, TMergedResult>;
 } => {
     const resolvedClassNames: { [property: string]: string } = { ...defaultClassNames };
     const resolvedStyles = { ...styles } as { [property: string]: React.CSSProperties };
@@ -282,10 +284,7 @@ export const mergeStyles = <T extends { [property: string]: string }>(
     // combine classNames & styles into one object
 
     const result: {
-        [property: string]: {
-            className: string;
-            style: React.CSSProperties;
-        };
+        [property: string]: TMergedResult;
     } = {};
 
     Object.keys(resolvedClassNames).forEach((key) => {
@@ -297,6 +296,7 @@ export const mergeStyles = <T extends { [property: string]: string }>(
 
     return { classNames: resolvedClassNames, styles: resolvedStyles, mergedResult: result } as any;
 };
+// ------------------------------------------------------------------
 
 /* istanbul ignore next */
 export function submitFormData(url: string, data: BodyInit, opts: any = {}) {
@@ -326,7 +326,7 @@ export function submitFormData(url: string, data: BodyInit, opts: any = {}) {
             reject({ status: 0, message: 'The file upload was aborted', type: e.type });
         xhr.ontimeout = (e) =>
             reject({ status: 0, message: 'XMLHttpRequest timed out', type: e.type });
-        xhr.send(data);
+        xhr.send(data as any);
     });
 
     return {

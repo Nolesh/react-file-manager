@@ -23,7 +23,12 @@ import {
 import { SameType } from '../src/lib/Utils/types';
 import * as utils from '../src/lib/Utils';
 
-import FileManager, { IFileManagerRef, IFileManagerProps, TFileValidator } from '../src/lib';
+import FileManager, {
+    IFileManagerRef,
+    IFileManagerProps,
+    TFileValidator,
+    IOverriddenRoot,
+} from '../src/lib';
 import { IFileData, ILocalFileData, IRemoteFileData } from '../src/lib/FileItemComponent';
 import {
     errorTxtInvalidFileFields,
@@ -310,7 +315,8 @@ describe('FileManager sorting', () => {
 
         expect(queryAllByTestId('read-only-text')[0].innerHTML).toEqual('Readme');
         expect(queryAllByTestId('read-only-text')[1].innerHTML).toEqual('Melody');
-        jest.runAllTimers();
+
+        // jest.runAllTimers();
     });
 
     test('should separate local and remote files or mixes them together', async () => {
@@ -365,7 +371,7 @@ describe('FileManager sorting', () => {
         expect(queryAllByTestId('read-only-text')[0].innerHTML).toEqual('NewLocal.txt');
         expect(queryAllByTestId('read-only-text')[1].innerHTML).toEqual('Readme');
         expect(queryAllByTestId('read-only-text')[2].innerHTML).toEqual('Melody');
-        jest.runAllTimers();
+        // jest.runAllTimers();
     });
 
     test('should freeze sort order during file renaming', async () => {
@@ -2515,7 +2521,7 @@ describe('FileManager basic tests', () => {
         jest.clearAllTimers();
     });
 
-    test('should render component with default fetchRemoteFiles function', async () => {
+    test('should render component without fetchRemoteFiles function', async () => {
         const { getByTestId, findByText } = render(<Manager fetchRemoteFiles={undefined} />);
 
         expect(within(getByTestId('label')).queryByText('loading')).not.toBeNull();
@@ -3298,7 +3304,8 @@ describe('FileManager exposed functions & props', () => {
         (input.click as jest.Mock).mockRestore();
     });
 
-    test('should test addLocalFiles (add single file)', async () => {
+    test('should test addLocalFiles (add single & multiple files)', async () => {
+        // single file
         mockFetch(true, 200, []);
 
         const { getByTitle, queryAllByRole, findByText } = render(<Manager />);
@@ -3311,14 +3318,13 @@ describe('FileManager exposed functions & props', () => {
 
         await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(1));
         expect(getByTitle('1.txt')).toBeInTheDocument();
-    });
 
-    test('should test addLocalFiles (add FileList)', async () => {
-        mockFetch(true, 200, []);
-
+        // multiple files
         const { create, restore } = mockFileList();
 
-        const { getByTitle, queryAllByRole, findByText } = render(<Manager />);
+        act(() => {
+            managerRef.current.removeAllLocalFiles();
+        });
 
         await findByText('dragNdrop');
 
@@ -3452,21 +3458,20 @@ describe('FileManager exposed functions & props', () => {
     // })
 
     // test.only('should not throw an error after fetching downloaded files when the component is already unmounted', async () => {
-    //
+
     //     mockFetch(true, 200, []);
-    //
+
     //     const { findByText, container, unmount } = render(
     //         <Manager />
     //     );
     //     await findByText('dragNdrop');
-    //
-    //
+
     //     // set incorrect fetch response with 100ms delay
     //     mockFetch(true, 200, [{err: 'bad response'}], 100);
-    //
+
     //     // we use assert count check to fail the test
     //     expect.assertions(2);
-    //
+
     //     act(() => {
     //       managerRef.current.reloadRemoteFiles()
     //       .then(result => {
@@ -3481,13 +3486,13 @@ describe('FileManager exposed functions & props', () => {
     //           expect(1).toBe(1);
     //       })
     //     });
-    //
+
     //     await findByText('loading');
-    //
+
     //     unmount();
     //     expect(container.innerHTML).toBe('');
     //     jest.runAllTimers()
-    //
+
     // });
 
     // same test as above but using "done" callback
@@ -3524,9 +3529,68 @@ describe('FileManager exposed functions & props', () => {
                 await findByText('loading');
                 unmount();
                 expect(container.innerHTML).toBe('');
-                jest.runAllTimers();
+                jest.advanceTimersByTime(100);
             })
             .catch((err) => done(err));
+    });
+
+    test('should override default container (root) component', async () => {
+        mockFetch(true, 200, simpleResponse);
+        let renderCounter = 0;
+
+        const Root: IOverriddenRoot = {
+            component: ({
+                componentRef,
+                fileItems,
+                isDragActive,
+                isDragReject,
+                isLoading,
+                isUploading,
+                disabled,
+                readOnly,
+                tabIndex,
+                sortFiles,
+                getEventProps,
+                update,
+            }) => {
+                renderCounter++;
+
+                expect(componentRef).toEqual({ current: undefined });
+
+                const data = fileItems
+                    .map((x) => x.props.fileData)
+                    .reduce((acc, val) => {
+                        const { oldDescription, state, ...rest } = val;
+                        return acc.concat(rest);
+                    }, []);
+
+                if (renderCounter > 2) expect(data).toEqual(simpleResponse);
+                else expect(Array.isArray(data) && data.length === 0).toBeTruthy();
+
+                if (renderCounter > 1 && renderCounter < 4) expect(isLoading).toEqual(true);
+                else expect(isLoading).toEqual(false);
+
+                expect(update).toEqual(expect.any(Function));
+                expect(getEventProps).toEqual(expect.any(Function));
+                expect(sortFiles).toEqual(expect.any(Function));
+
+                expect(isDragActive).toEqual(false);
+                expect(isDragReject).toEqual(false);
+                expect(isUploading).toEqual(false);
+
+                expect(disabled).toEqual(true);
+                expect(readOnly).toEqual(true);
+                expect(tabIndex).toEqual(-1);
+
+                return <div role="customroot">content</div>;
+            },
+        };
+
+        const { findByText, container, queryByRole } = render(
+            <Manager overrides={{ Root }} readOnly={true} disabled={true} />
+        );
+        await findByText('content');
+        expect(queryByRole('customroot')).toBeInTheDocument();
     });
 });
 

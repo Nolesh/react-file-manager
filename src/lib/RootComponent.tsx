@@ -261,39 +261,51 @@ export const RootComponent: IRFC<IRootComponentProps> = ({
     const noClick = !!!getEventProps().onClick;
 
     const [showFooter, setShowFooter] = useState(false);
-
-    const texts = Object.keys(defTexts).reduce<TTexts>((acc, name): any => {
-        const ind = name as TTextItem;
-        const text = overrides?.texts?.[ind];
-        acc[ind] = text || (defTexts as TTexts)[ind];
-        return acc;
-    }, {});
-
-    const { classNames, styles, mergedResult } = useMemo(
-        () => mergeStyles(defaultClassNames, overrides?.classNames, overrides?.styles),
-        [overrides?.classNames, overrides?.styles]
-    );
+    const [updateHeader, setUpdateHeader] = useState(false);
 
     const hideHeader = overrides?.hideHeader ?? false;
     const hideFooter = overrides?.hideFooter ?? false;
 
     useEffect(() => {
+        if (!hideHeader) sortFiles(handleSorting);
+        else sortFiles(null);
+    }, [sortFiles, hideHeader]);
+
+    useEffect(() => {
         if (hideFooter) setShowFooter(false);
-        else if (!hideFooter && !!componentRef.current) {
+        else {
             setTimeout(() => {
+                if (!!!componentRef.current) return;
                 const { scrollHeight, clientHeight } = componentRef.current;
                 setShowFooter(scrollHeight > clientHeight);
             });
         }
     }, [hideFooter, componentRef, fileItems]);
 
+    const texts = useMemo(
+        () =>
+            Object.keys(defTexts).reduce<TTexts>((acc, name): any => {
+                const ind = name as TTextItem;
+                const text = overrides?.texts?.[ind];
+                acc[ind] = text || (defTexts as TTexts)[ind];
+                return acc;
+            }, {}),
+        [overrides?.texts]
+    );
+
+    const { classNames, styles, mergedResult } = useMemo(
+        () => mergeStyles(defaultClassNames, overrides?.classNames, overrides?.styles),
+        [overrides?.classNames, overrides?.styles]
+    );
+
     // -------------- SORTING -----------------
 
     const toggleSortFileMode = useCallback(() => {
         if (disabled) return;
         SortFileMode.toggle();
+        setUpdateHeader((value) => !value);
         update();
-    }, [disabled, update]);
+    }, [disabled, update, setUpdateHeader]);
 
     const handleColumnHeaderClick = useCallback(
         (e: React.MouseEvent<HTMLDivElement>, name: TColumn) => {
@@ -304,12 +316,56 @@ export const RootComponent: IRFC<IRootComponentProps> = ({
 
             const column = new SortColumn(name, dataset.order as TOrder);
             SortColumn.setState(column);
+            setUpdateHeader((value) => !value);
             update();
         },
-        [disabled, update]
+        [disabled, update, setUpdateHeader]
     );
 
-    if (!hideHeader) sortFiles(handleSorting);
+    // ----------------------------------------
+
+    const header = useMemo(
+        () =>
+            !hideHeader && (
+                <div
+                    role="header"
+                    {...mergedResult.headerStyle}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div
+                        data-testid="column-type"
+                        data-order={SortColumn.getOrder('type')}
+                        data-priority="2"
+                        onClick={(e) => handleColumnHeaderClick(e, 'type')}
+                    >
+                        {SortColumn.getSign('type')}
+                        {texts.headerFileType}
+                    </div>
+                    <div
+                        data-testid="column-name"
+                        data-order={SortColumn.getOrder('name')}
+                        data-priority="1"
+                        onClick={(e) => handleColumnHeaderClick(e, 'name')}
+                    >
+                        {SortColumn.getSign('name')}
+                        {texts.headerFileName}
+                    </div>
+                    <div
+                        data-testid="column-size"
+                        data-order={SortColumn.getOrder('size')}
+                        data-priority="3"
+                        onClick={(e) => handleColumnHeaderClick(e, 'size')}
+                    >
+                        {SortColumn.getSign('size')}
+                        {texts.headerFileSize}
+                    </div>
+                    <div data-testid="column-sort-file-mode" onClick={toggleSortFileMode}>
+                        {SortFileMode.sign}
+                    </div>
+                </div>
+            ),
+        [handleColumnHeaderClick, toggleSortFileMode, updateHeader, hideHeader, texts]
+    );
 
     // ----------------------------------------
 
@@ -341,44 +397,7 @@ export const RootComponent: IRFC<IRootComponentProps> = ({
                 className="drop-zone-container"
                 style={isDragActive || isLoading ? { minHeight: '100%' } : null}
             >
-                {!hideHeader && (
-                    <div
-                        role="header"
-                        {...mergedResult.headerStyle}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div
-                            data-testid="column-type"
-                            data-order={SortColumn.getOrder('type')}
-                            data-priority="2"
-                            onClick={(e) => handleColumnHeaderClick(e, 'type')}
-                        >
-                            {SortColumn.getSign('type')}
-                            {texts.headerFileType}
-                        </div>
-                        <div
-                            data-testid="column-name"
-                            data-order={SortColumn.getOrder('name')}
-                            data-priority="1"
-                            onClick={(e) => handleColumnHeaderClick(e, 'name')}
-                        >
-                            {SortColumn.getSign('name')}
-                            {texts.headerFileName}
-                        </div>
-                        <div
-                            data-testid="column-size"
-                            data-order={SortColumn.getOrder('size')}
-                            data-priority="3"
-                            onClick={(e) => handleColumnHeaderClick(e, 'size')}
-                        >
-                            {SortColumn.getSign('size')}
-                            {texts.headerFileSize}
-                        </div>
-                        <div data-testid="column-sort-file-mode" onClick={toggleSortFileMode}>
-                            {SortFileMode.sign}
-                        </div>
-                    </div>
-                )}
+                {header}
                 {isLoading && (
                     <div data-testid="cover" {...mergedResult.coverStyle}>
                         <div data-testid="label" {...mergedResult.coverTextStyle}>

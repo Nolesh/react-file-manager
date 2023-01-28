@@ -326,7 +326,7 @@ export const CustomFileItemSizeComponent: TSizeFieldComponent = ({
     return (
         <div
             style={{
-                color: readOnlyOrDisabled ? 'white' : 'yellowgreen',
+                color: readOnlyOrDisabled ? 'gray' : 'white',
                 fontWeight: 'bold',
             }}
         >
@@ -453,7 +453,7 @@ export const CustomControlComponent: TControlFieldComponent = ({
                         title: 'File menu',
                         tabIndex: tabIndex,
                     }}
-                    buttonChildren={<div style={{ fontSize: 28, color: '#777' }}>&equiv;</div>}
+                    buttonChildren={<div style={{ fontSize: 28 }}>&equiv;</div>}
                     disabled={disabled || fileData.disabled}
                 />
             )}

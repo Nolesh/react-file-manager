@@ -178,8 +178,9 @@ describe('RootComponent', () => {
             methods: { setItem },
         } = localStorageImpl.register(); // mock localStorage
         rerender(<Root disabled />);
+        expect(getByTestId('column-size')).toHaveAttribute('data-order', 'asc');
         fireEvent.click(getByTestId('column-size'));
-        expect(getByTestId('column-size')).toHaveAttribute('data-order', 'desc');
+        expect(getByTestId('column-size')).toHaveAttribute('data-order', 'asc');
         fireEvent.click(getByTestId('column-sort-file-mode'));
         expect(setItem).not.toHaveBeenCalled();
 
@@ -232,9 +233,9 @@ describe('RootComponent', () => {
         fireEvent.keyDown(root);
         expect(onKeyDown).toHaveBeenCalled();
 
-        expect(sortFiles).not.toHaveBeenCalled();
+        expect(sortFiles).toHaveBeenNthCalledWith(1, null);
         rerender(<Root />);
-        expect(sortFiles).toBeCalledTimes(1);
+        expect(sortFiles).toHaveBeenNthCalledWith(2, expect.any(Function));
 
         fireEvent.click(getByTestId('column-type'));
         expect(update).toBeCalledTimes(1);
