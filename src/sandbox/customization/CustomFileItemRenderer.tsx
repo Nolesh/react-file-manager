@@ -14,7 +14,7 @@ import {
     IFileItemComponentProps,
     Icons,
     defaultFileItemClassNames as defaultClassNames,
-} from '../lib';
+} from '../../lib';
 
 const {
     CheckIcon,

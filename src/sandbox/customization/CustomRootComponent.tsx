@@ -2,7 +2,7 @@ import React, { ReactElement, FC, useState } from 'react';
 
 import { CircularProgress } from '@material-ui/core';
 
-import { IRootComponentProps, TSortFunc } from '../lib';
+import { IRootComponentProps, TSortFunc } from '../../lib';
 
 type TColumn = 'type' | 'name' | 'size';
 type TOrder = 'asc' | 'desc';

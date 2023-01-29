@@ -18,7 +18,7 @@ import {
     TControlFieldButtons,
     TControlFieldComponent,
     TReadOnlyIconComponent,
-} from '../lib';
+} from '../../lib';
 
 import { Select, MenuItem, CircularProgress } from '@material-ui/core';
 

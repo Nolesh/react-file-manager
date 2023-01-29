@@ -5,7 +5,7 @@ import React, { ReactElement } from 'react';
 import { Button, TextField, Grid, Menu, MenuItem, CircularProgress } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 
-import { IFileItemComponentProps, IMenuItem, AudioThumbnail } from '../lib';
+import { IFileItemComponentProps, IMenuItem, AudioThumbnail } from '../../lib';
 
 const useStyles = makeStyles((theme) => ({
     displayItem: {
@@ -158,8 +158,8 @@ const renderFileItemWithClasses = ({
     getItemProps,
     getCommonProps,
     getActions,
-    classes, // additional property that contains styles
-}: IFileItemComponentProps & { classes: any }): ReactElement => {
+}: IFileItemComponentProps): ReactElement => {
+    const classes = useStyles();
     const { root, formatSize, isLocalFile, disabled, isDragActive, noKeyboard, readOnly } =
         getCommonProps();
     const {
@@ -399,12 +399,5 @@ const renderFileItemWithClasses = ({
 
 type TFileItemComponent = (args: IFileItemComponentProps) => ReactElement;
 
-export const createMaterialFileItemRenderer = (): TFileItemComponent => {
-    const classes = useStyles();
-
-    // Let's pass classes to custom render function
-    const customRenderFileItem: TFileItemComponent = (args) =>
-        renderFileItemWithClasses({ ...args, classes });
-
-    return customRenderFileItem;
-};
+export const MaterialFileItemRenderer: TFileItemComponent = (args) =>
+    renderFileItemWithClasses({ ...args });
