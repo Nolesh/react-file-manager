@@ -5,7 +5,6 @@ export {
     IFileManagerProps,
     TFileValidator,
     TSortFunc,
-    TFilePreview,
     TGetUploadParams,
     TOverrides,
 } from './FileManager';
@@ -44,6 +43,7 @@ export {
     TextField,
 } from './Components';
 export * as Icons from './SvgIcons';
+export { TFilePreview } from './Utils/file-preview';
 export { TOnError, TInternalError, TCustomError, TErrorCodes } from './Utils/errors';
 
 export default FileManager;

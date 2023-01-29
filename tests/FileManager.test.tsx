@@ -20,8 +20,9 @@ import {
     useCustomTimer,
     mockFileList,
 } from './MockData';
-import { SameType } from '../src/lib/Utils/types';
+
 import * as utils from '../src/lib/Utils';
+import * as thumbnail from '../src/lib/Utils/file-preview';
 
 import FileManager, {
     IFileManagerRef,
@@ -478,7 +479,8 @@ describe('FileManager preview', () => {
 
     test('should render default image preview', async () => {
         // https://stackoverflow.com/questions/59312671/mock-only-one-function-from-module-but-leave-rest-with-original-functionality
-        const spy = jest.spyOn(utils, 'generateImageThumbnail');
+
+        const spy = jest.spyOn(thumbnail, 'generateImageThumbnail');
         spy.mockImplementation(() => Promise.resolve('image-src'));
 
         const { getByRole, queryAllByRole, findByText } = render(<Manager />);
@@ -490,6 +492,7 @@ describe('FileManager preview', () => {
         fireEvent.change(input, { target: { files: [file] } });
 
         await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(1));
+
         expect(getByRole('imagelazyloader')).toBeInTheDocument();
         expect(
             within(getByRole('imagelazyloader')).getByRole('img', { hidden: true })
@@ -500,7 +503,7 @@ describe('FileManager preview', () => {
     });
 
     test('should render a fallback if an error occurs during image preview creation', async () => {
-        const spy = jest.spyOn(utils, 'generateImageThumbnail');
+        const spy = jest.spyOn(thumbnail, 'generateImageThumbnail');
         spy.mockImplementation(() =>
             Promise.reject({ data: { type: 'abort' }, message: 'warn on abort' })
         );
@@ -545,7 +548,7 @@ describe('FileManager preview', () => {
         // const mock =  mockCreateObjectURL('data:video/mp4;base64,');
 
         // https://stackoverflow.com/questions/59312671/mock-only-one-function-from-module-but-leave-rest-with-original-functionality
-        const spy = jest.spyOn(utils, 'generateVideoThumbnail');
+        const spy = jest.spyOn(thumbnail, 'generateVideoThumbnail');
         spy.mockImplementation(() => Promise.resolve({ image: 'video-image-src', duration: 10 }));
 
         const { getByRole, queryAllByRole, findByText } = render(<Manager />);
@@ -567,7 +570,7 @@ describe('FileManager preview', () => {
     });
 
     test('should render a fallback if an error occurs during video preview creation', async () => {
-        const spy = jest.spyOn(utils, 'generateVideoThumbnail');
+        const spy = jest.spyOn(thumbnail, 'generateVideoThumbnail');
         spy.mockImplementation(() => Promise.reject({ data: 'smth', message: 'custom error' }));
 
         let err = null;
@@ -669,7 +672,7 @@ describe('FileManager preview', () => {
     test('should test custom preview function', async () => {
         // should use the default implementation
 
-        const spy = jest.spyOn(utils, 'generateImageThumbnail');
+        const spy = jest.spyOn(thumbnail, 'generateImageThumbnail');
         spy.mockImplementation(() => Promise.resolve('image-src'));
 
         const { rerender, getByRole, getAllByRole, queryAllByRole, findByText } = render(

@@ -7,7 +7,6 @@ import React, {
     useCallback,
     useImperativeHandle,
     forwardRef,
-    useMemo,
 } from 'react';
 
 import PropTypes from 'prop-types';
@@ -43,11 +42,10 @@ import {
     isEventWithFiles,
     accepts,
     isDragReject,
-    safePromise,
-    generateVideoThumbnail,
-    generateImageThumbnail,
     makeQueryablePromise,
 } from './Utils';
+
+import generatePreview, { TFilePreview } from './Utils/file-preview';
 
 import { PartialBy, SameType } from './Utils/types';
 
@@ -118,10 +116,6 @@ export type TOverrides = {
     Root?: IOverriddenRoot;
     FileItem?: IOverriddenFileItem;
 };
-
-export type TFilePreview = (
-    file: File
-) => Promise<string | { src: string; [x: string]: any } | null | void>;
 
 export interface IFileManagerProps {
     getRoot?: (root: HTMLElement) => void;
@@ -374,8 +368,10 @@ const FileManager = forwardRef(
             dataRef.current.onSortFunc = f;
         }, []);
 
-        const generateUID = overrides?.uidGenerator ?? guid;
-        const formatSize = overrides?.fileSizeFormatter ?? internalFileSizeFormatter;
+        const generateUID = useCallback(overrides?.uidGenerator ?? guid, [overrides?.uidGenerator]);
+        const formatSize = useCallback(overrides?.fileSizeFormatter ?? internalFileSizeFormatter, [
+            overrides?.fileSizeFormatter,
+        ]);
 
         useEffect(() => {
             dataRef.current.isMounted = true;
@@ -1270,7 +1266,7 @@ const FileManager = forwardRef(
                 };
 
                 resolve(newFile);
-                generatePreview(newFile, (fileData) => {
+                generatePreview(newFile, filePreview, (fileData) => {
                     updateLocalFileData(
                         {
                             totalSize: fileData.totalSize,
@@ -1281,85 +1277,6 @@ const FileManager = forwardRef(
                     );
                 });
             });
-
-        const generatePreview = async (
-            fileData: ILocalFileData,
-            resolve: (fileData: ILocalFileData) => void
-        ) => {
-            const [result, error] = await safePromise(filePreview(fileData.file));
-            if (error) {
-                fileData.previewData = null;
-                return resolve(fileData);
-            }
-
-            if (result) {
-                if (typeof result === 'string') {
-                    // standard base64 string or image url
-                    fileData.previewData = { src: result };
-                    resolve(fileData);
-                } else {
-                    // user object
-                    fileData.previewData = result;
-                    resolve(fileData);
-                }
-            } else defaultGeneratePreview(fileData, resolve);
-        };
-
-        const defaultGeneratePreview = (
-            fileData: ILocalFileData,
-            resolve: (fileData: ILocalFileData) => void
-        ) => {
-            const { file } = fileData;
-
-            const isImage = file.type.startsWith('image/');
-            let isVideo = file.type.startsWith('video/');
-            let isAudio = file.type.startsWith('audio/');
-
-            // Fixes bug in FF: https://bugzilla.mozilla.org/show_bug.cgi?id=1240259
-            isVideo = isVideo && !file.type.includes('/ogg');
-            isAudio = isAudio || file.type.includes('/ogg');
-
-            if (isImage) {
-                generateImageThumbnail(file)
-                    .then((src) => {
-                        fileData.previewData = { src };
-                        resolve(fileData);
-                    })
-                    .catch((err) => {
-                        if (err?.data?.type === 'abort') console.warn(err.message);
-                        else console.error(err.message, err.data);
-                        fileData.previewData = null;
-                        resolve(fileData);
-                    });
-            } else if (isVideo) {
-                generateVideoThumbnail(file, -1)
-                    .then(({ image, duration }) => {
-                        fileData.previewData = { src: image, duration };
-                        resolve(fileData);
-                    })
-                    .catch((err) => {
-                        console.error(err.message, err.data);
-                        fileData.previewData = null;
-                        resolve(fileData);
-                    });
-            } else if (isAudio) {
-                const src = URL.createObjectURL(file);
-                const audio = new Audio();
-                audio.onloadedmetadata = () => {
-                    fileData.previewData = { src, duration: audio.duration };
-                    resolve(fileData);
-                };
-                audio.onerror = (err) => {
-                    console.error('An error occured while loading audio file', err);
-                    fileData.previewData = null;
-                    resolve(fileData);
-                };
-                audio.src = src;
-            } else {
-                fileData.previewData = null;
-                resolve(fileData);
-            }
-        };
 
         /**************************** Drag & drop *********************************/
 
