@@ -6,8 +6,8 @@ export const CustomFileItemRootStyles = {
     base: {
         className: 'display-item-overridden',
     },
-    initial: {
-        className: 'display-item-initial-overridden',
+    local: {
+        className: 'display-item-local-overridden',
         // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
         // style: { background: 'linear-gradient(0deg, rgb(53 174 0) 0%, rgb(196 255 63) 100%)' }
     },
@@ -30,9 +30,12 @@ export const CustomFileItemRootStyles = {
         className: 'display-item-error-overridden',
         // style: { background: 'linear-gradient(0deg, rgb(174 72 69) 0%, rgb(255 94 88) 100%)' }
     },
-    disabled: {
+    localDisabled: {
         className: 'display-item-disabled-overridden',
         // style: { color: '#999', background: '#ddd', pointerEvents:'none' }
+    },
+    uploadedDisabled: {
+        className: 'display-item-disabled-overridden',
     },
 };
 

@@ -867,7 +867,7 @@ const FileManager = forwardRef(
             const uploadParams = await obtainUploadParams(files);
 
             for (const fileData of files) {
-                if (!['initial', 'uploadError'].includes(fileData.state)) continue;
+                if (!['local', 'uploadError'].includes(fileData.state)) continue;
                 const promise = createSingleFileUploadPromise(fileData, uploadParams, false, files);
                 uploadPromises.push(promise);
                 uploadingFiles.push(fileData);
@@ -1256,7 +1256,7 @@ const FileManager = forwardRef(
                 const newFile: ILocalFileData = {
                     uid: generateUID(),
                     file: file,
-                    state: 'initial',
+                    state: 'local',
                     fileName: file.name,
                     fileSize: file.size,
                     uploadedSize: 0,

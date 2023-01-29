@@ -4,8 +4,8 @@ import { IAudioThumbnailProps } from './Components';
 import { TThrowError } from './Utils/errors';
 import { TStyle, SameType, TComponent, ExtractKeys } from './Utils/types';
 
-// internal state of a file item (0 - initial, 1 - uploading, 2 - uploaded, 3 - upload error, 4 - deletion error)
-export type TFileItemState = 'initial' | 'uploading' | 'uploaded' | 'uploadError' | 'deletionError';
+// internal state of a file item (0 - local, 1 - uploading, 2 - uploaded, 3 - upload error, 4 - deletion error)
+export type TFileItemState = 'local' | 'uploading' | 'uploaded' | 'uploadError' | 'deletionError';
 
 export type TFileSizeFormatter = (size: number) => string;
 

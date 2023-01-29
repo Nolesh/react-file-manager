@@ -1,5 +1,5 @@
 $menuItemColor: #333;
-$displayItemInitialColor: #3f52b5;
+$displayItemLocalColor: #3f52b5;
 $displayItemUploadedColor: #5598ff;
 $displayItemErrorColor: #f4645f;
 $dragActiveColor: #303f9f;
@@ -352,7 +352,7 @@ $dragActiveColor: #303f9f;
         width: 40px;
 
         &:focus {
-            outline: auto $displayItemInitialColor;
+            outline: auto $displayItemLocalColor;
         }
 
         &:hover {
@@ -407,13 +407,13 @@ $dragActiveColor: #303f9f;
     }
 
     .display-item-local {
-        background: $displayItemInitialColor;
+        background: $displayItemLocalColor;
         border: 1px solid #333;
     }
 
     .display-item-uploading {
         animation: react-file-manager_uploadingBackgroundAnim 2.5s ease infinite;
-        background: linear-gradient(180deg, $displayItemInitialColor, $displayItemUploadedColor);
+        background: linear-gradient(180deg, $displayItemLocalColor, $displayItemUploadedColor);
         background-size: 100% 250%;
     }
 
@@ -434,7 +434,7 @@ $dragActiveColor: #303f9f;
     }
 
     .display-item-edit-mode {
-        background: $displayItemInitialColor;
+        background: $displayItemLocalColor;
         border: 1px solid #777;
 
         @include background-image-cloud('rgb(70,100,200)');

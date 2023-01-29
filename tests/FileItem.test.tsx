@@ -73,7 +73,7 @@ const defaultFileData: ILocalFileData = {
     cancelUpload,
 
     uploadedSize: 0,
-    state: 'initial',
+    state: 'local',
 };
 
 const Component = (props: {
@@ -144,7 +144,7 @@ const Component = (props: {
 };
 
 describe('FileItemComponent', () => {
-    test('should call "updateFileData" function when focusing and blurring the textbox and the file item is in "initial" state', async () => {
+    test('should call "updateFileData" function when focusing and blurring the textbox and the file item is in "local" state', async () => {
         const { getByRole } = render(<Component />);
 
         const textbox = getByRole('textbox');
@@ -460,7 +460,7 @@ describe('FileItemComponent', () => {
 });
 
 describe('DefaultFileItemRenderer', () => {
-    test('should render the file item in its original (initial) state', () => {
+    test('should render the file item in local state', () => {
         const { getByRole } = render(<Component />);
         expect(getByRole('fileitem')).toHaveAttribute('id', 'file-uid-123');
         expect(within(getByRole('thumbnail')).getByText('txt')).not.toBeNull();
@@ -502,13 +502,10 @@ describe('DefaultFileItemRenderer', () => {
         );
 
         check(
-            { fileDataProps: { state: 'initial' }, fileItemProps: { disabled: true } },
+            { fileDataProps: { state: 'local' }, fileItemProps: { disabled: true } },
             'display-item-local-disabled'
         );
-        check(
-            { fileDataProps: { state: 'initial', disabled: true } },
-            'display-item-local-disabled'
-        );
+        check({ fileDataProps: { state: 'local', disabled: true } }, 'display-item-local-disabled');
         check(
             { fileDataProps: { state: 'uploadError' }, fileItemProps: { disabled: true } },
             'display-item-local-disabled'
@@ -519,7 +516,7 @@ describe('DefaultFileItemRenderer', () => {
         );
 
         // // edit mode
-        check({ fileDataProps: { editMode: true, state: 'initial' } }, 'display-item-local');
+        check({ fileDataProps: { editMode: true, state: 'local' } }, 'display-item-local');
         check({ fileDataProps: { editMode: true, state: 'uploaded' } }, 'display-item-edit-mode');
 
         // rest states
@@ -710,7 +707,7 @@ describe('DefaultFileItemRenderer customization', () => {
     test('should override default root', () => {
         const { rerender, getAllByRole, getByRole, getByTestId } = render(
             <Component
-                // fileDataProps={{ state: 'initial' }}
+                // fileDataProps={{ state: 'local' }}
                 fileItemProps={{
                     overrides: {
                         rootStyles: {
@@ -859,7 +856,7 @@ describe('DefaultFileItemRenderer customization', () => {
     });
 
     test('should override default buttons (control)', () => {
-        // initial state
+        // local state
         const { rerender, getAllByRole, getByRole } = render(
             <Component
                 fileItemProps={{
@@ -950,7 +947,7 @@ describe('DefaultFileItemRenderer customization', () => {
     });
 
     test('should override default menu (control)', () => {
-        // initial state
+        // local state
         const { rerender, getAllByRole, getByRole } = render(
             <Component
                 fileDataProps={{ state: 'uploaded' }}
@@ -1027,9 +1024,9 @@ describe('DefaultFileItemRenderer customization', () => {
             },
         };
 
-        // initial state
+        // local state
         const { rerender, queryByRole } = render(
-            <Component fileDataProps={{ state: 'initial' }} fileItemProps={fileItemProps} />
+            <Component fileDataProps={{ state: 'local' }} fileItemProps={fileItemProps} />
         );
 
         expect(queryByRole('control')).not.toBeInTheDocument();
