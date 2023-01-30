@@ -62,6 +62,13 @@ const request = (
     });
 };
 
+const fetchRemoteFiles = () => {
+    return request('fetchFiles').then((res) => res.json());
+    // return Promise.reject()
+    // return Promise.resolve({} as any)
+    // return Promise.resolve([])
+};
+
 const uploadFileParams: TGetUploadParams = (localFileData) =>
     Array.isArray(localFileData)
         ? {
@@ -403,12 +410,7 @@ export const Manager: FC = (): ReactElement => {
                     <FileManager
                         ref={ref}
                         getRoot={(el) => (root = el)} // Ref callback that gets a DOM reference to the root body element. Can be useful to programmatically scroll.
-                        fetchRemoteFiles={() => {
-                            return request('fetchFiles').then((res) => res.json());
-                            // return Promise.reject()
-                            // return Promise.resolve({} as any)
-                            // return Promise.resolve([])
-                        }}
+                        fetchRemoteFiles={fetchRemoteFiles}
                         fileFieldMapping={(data) => ({
                             // We can omit this option if the component file fields are the same as the server fields.
                             // We intentionally made them different to show how the files can be matched
@@ -540,14 +542,17 @@ export const Manager: FC = (): ReactElement => {
                     <Button
                         variant="contained"
                         color="primary"
-                        style={{ margin: 10, width: 160 }}
+                        style={{ margin: 10, width: 200 }}
                         onClick={() => {
-                            ref.current.reloadRemoteFiles().then((remoteFiles) => {
-                                console.log('reloadRemoteFiles', remoteFiles);
+                            // ref.current.fetchRemoteFiles(fetchRemoteFiles).then((remoteFiles) => {
+                            //     console.log('fetchRemoteFiles', remoteFiles);
+                            // });
+                            ref.current.fetchRemoteFiles().then((remoteFiles) => {
+                                console.log('fetchRemoteFiles', remoteFiles);
                             });
                         }}
                     >
-                        Reload
+                        Fetch Remote Files
                     </Button>
 
                     <Paper>

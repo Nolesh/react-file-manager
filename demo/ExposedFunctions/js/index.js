@@ -27,6 +27,8 @@ const request = (url, method = 'GET', body = null) => {
     });
 };
 
+const fetchRemoteFiles = () => request('fetchFiles').then((res) => res.json());
+
 const handleErrors = (err) => {
     console.log(err);
     if (Array.isArray(err)) {
@@ -41,9 +43,7 @@ const handleErrors = (err) => {
 };
 
 const basicParams = {
-    fetchRemoteFiles: () => {
-        return request('fetchFiles').then((res) => res.json());
-    },
+    fetchRemoteFiles,
     fileFieldMapping: (data) => ({
         // We can omit this option if the component file fields are the same as the server fields.
         // We intentionally made them different to show how the files can be matched
@@ -169,7 +169,7 @@ const Component = () => {
                             fileManagerRef.current.upload().then((result) => {
                                 if (result)
                                     console.log('The file upload process is completed', result);
-                                // fileManagerRef.current.reloadRemoteFiles().then(() => console.log('Files have been reloaded'))
+                                // fileManagerRef.current.fetchRemoteFiles().then(() => console.log('Files have been reloaded'))
                                 // .catch(err => console.error('An error occurred during reloading files', err))
                             })
                         }
@@ -193,12 +193,17 @@ const Component = () => {
                     color="primary"
                     style={{ margin: 10, width: 200 }}
                     onClick={() => {
-                        fileManagerRef.current.reloadRemoteFiles().then((remoteFiles) => {
-                            console.log('reloadRemoteFiles', remoteFiles);
-                        });
+                        // fileManagerRef.current.fetchRemoteFiles().then((remoteFiles) => {
+                        //     console.log('fetchRemoteFiles', remoteFiles);
+                        // });
+                        fileManagerRef.current
+                            .fetchRemoteFiles(fetchRemoteFiles)
+                            .then((remoteFiles) => {
+                                console.log('fetchRemoteFiles', remoteFiles);
+                            });
                     }}
                 >
-                    Reload
+                    Fetch Remote Files
                 </Button>
 
                 <Button

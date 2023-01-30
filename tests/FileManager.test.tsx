@@ -84,32 +84,34 @@ const processResponseSimple = jest.fn((response) => {
     return response;
 });
 
+let fetchURL: string = null;
+
+const request = (
+    url: string,
+    method = 'GET',
+    body: Record<string, unknown> | null = null
+): Promise<any> => {
+    return fetch(`/api/${url}`, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+    }).then(async (response) => {
+        if (!response.ok) {
+            const errorInfo = await response.json();
+            // console.log('errorInfo', errorInfo);
+            return Promise.reject('test-error');
+        }
+        return Promise.resolve(response);
+    });
+};
+
 let managerRef: React.RefObject<IFileManagerRef> = null;
 let root: HTMLElement = null;
 
 const Manager = (props: Partial<IFileManagerProps>) => {
     managerRef = React.useRef();
-
-    const request = (
-        url: string,
-        method = 'GET',
-        body: Record<string, unknown> | null = null
-    ): Promise<any> => {
-        return fetch(`/api/${url}`, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            ...(body ? { body: JSON.stringify(body) } : {}),
-        }).then(async (response) => {
-            if (!response.ok) {
-                const errorInfo = await response.json();
-                // console.log('errorInfo', errorInfo);
-                return Promise.reject('test-error');
-            }
-            return Promise.resolve(response);
-        });
-    };
 
     return (
         <FileManager
@@ -173,7 +175,7 @@ function mockFetch(ok: boolean, status: number, data?: { [key: string]: any }, d
           )
         : Promise.resolve(response);
 
-    global.fetch = jest.fn().mockImplementation(() => mockFetchPromise);
+    global.fetch = jest.fn().mockImplementation((url) => ((fetchURL = url), mockFetchPromise));
 }
 
 // ---------------------------------------------------------------------
@@ -3396,7 +3398,7 @@ describe('FileManager exposed functions & props', () => {
         removeNCheck(4);
     });
 
-    test('should test reloadRemoteFiles and check uploaded & local files', async () => {
+    test('should test fetchRemoteFiles and check uploaded & local files', async () => {
         mockFetch(true, 200, []);
 
         const { getByRole, findByText, queryAllByRole } = render(<Manager />);
@@ -3408,9 +3410,11 @@ describe('FileManager exposed functions & props', () => {
         mockFetch(true, 200, simpleResponse);
 
         act(() => {
-            managerRef.current.reloadRemoteFiles();
+            managerRef.current.fetchRemoteFiles();
         });
         await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(2));
+
+        expect(fetchURL).toEqual('/api/fetchFiles');
 
         expect(managerRef.current.remoteFiles.length).toEqual(2);
         expect(managerRef.current.localFiles.length).toEqual(0);
@@ -3424,6 +3428,37 @@ describe('FileManager exposed functions & props', () => {
 
         expect(managerRef.current.remoteFiles[0].fileName).toEqual('readOnly.pdf');
         expect(managerRef.current.localFiles[0].fileName).toEqual('1.txt');
+
+        // fetchRemoteFiles with arg
+
+        const fileName = 'pic.png';
+        const newSimpleResponse = [
+            {
+                uid: '99vcb',
+                fileName: fileName,
+                fileSize: 50128,
+            },
+        ];
+        mockFetch(true, 200, newSimpleResponse);
+        const newFetch = () => request('newRequestToFetchRemoteFiles').then((res) => res.json());
+
+        act(() => {
+            managerRef.current.removeAllLocalFiles();
+            managerRef.current.fetchRemoteFiles(newFetch).then((res) => {
+                const correctResp = newSimpleResponse.map(
+                    (x: any) => ((x['state'] = 'uploaded'), (x['oldDescription'] = fileName), x)
+                );
+                expect(res).toEqual(correctResp);
+            });
+        });
+        await findByText(fileName);
+
+        expect(fetchURL).toEqual('/api/newRequestToFetchRemoteFiles');
+
+        expect(managerRef.current.remoteFiles.length).toEqual(1);
+        expect(managerRef.current.localFiles.length).toEqual(0);
+
+        expect(managerRef.current.remoteFiles[0].fileName).toEqual(fileName);
     });
 
     test('should throw a file field mapping error', async () => {
@@ -3444,11 +3479,11 @@ describe('FileManager exposed functions & props', () => {
         // expect.assertions(2);
 
         act(() => {
-            // managerRef.current.reloadRemoteFiles()
+            // managerRef.current.fetchRemoteFiles()
             // .catch(err => {
             //     expect(err.message).toBe(errorTxtInvalidFileFields)
             // })
-            expect(async () => await managerRef.current.reloadRemoteFiles()).rejects.toThrow(
+            expect(async () => await managerRef.current.fetchRemoteFiles()).rejects.toThrow(
                 errorTxtInvalidFileFields
             );
         });
@@ -3476,7 +3511,7 @@ describe('FileManager exposed functions & props', () => {
     //     expect.assertions(2);
 
     //     act(() => {
-    //       managerRef.current.reloadRemoteFiles()
+    //       managerRef.current.fetchRemoteFiles()
     //       .then(result => {
     //           // if the assertion is false, it does not fail the test,
     //           // so we use 'expect.assertions'
@@ -3511,7 +3546,7 @@ describe('FileManager exposed functions & props', () => {
 
                 act(() => {
                     managerRef.current
-                        .reloadRemoteFiles()
+                        .fetchRemoteFiles()
                         .then((result) => {
                             expect(result).toEqual([]);
                             done();

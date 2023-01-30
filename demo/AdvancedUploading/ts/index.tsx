@@ -14,7 +14,8 @@ type TRequestFunc = (
 // Retrieves the error message from the server error response
 // Since our error response is an object containing a status and a message,
 // we need to convert it to a string
-const getErrorMessage = (error: { status: number; message: string }) => `${error.message} (${error.status})`;
+const getErrorMessage = (error: { status: number; message: string }) =>
+    `${error.message} (${error.status})`;
 
 const request: TRequestFunc = (url, method = 'GET', body = null) => {
     return fetch(`/api/${url}`, {
@@ -32,6 +33,8 @@ const request: TRequestFunc = (url, method = 'GET', body = null) => {
         return Promise.resolve(response);
     });
 };
+
+const fetchRemoteFiles = () => request('fetchFiles').then((res) => res.json());
 
 const getUploadParams: TGetUploadParams = (localFileData) =>
     Array.isArray(localFileData)
@@ -134,9 +137,7 @@ const Component = () => {
 
                 <FileManager
                     ref={ref}
-                    fetchRemoteFiles={() => {
-                        return request('fetchFiles').then((res) => res.json());
-                    }}
+                    fetchRemoteFiles={fetchRemoteFiles}
                     fileFieldMapping={(data) => ({
                         // We can omit this option if the component file fields are the same as the server fields.
                         // We intentionally made them different to show how the files can be matched
@@ -232,7 +233,7 @@ const Component = () => {
                             ref.current.upload().then((result) => {
                                 if (result)
                                     console.log('The file upload process is completed', result);
-                                // ref.current.reloadRemoteFiles().then(() => console.log('Files have been reloaded'))
+                                // ref.current.fetchRemoteFiles().then(() => console.log('Files have been reloaded'))
                                 // .catch(err => console.error('An error occurred during reloading files', err))
                             })
                         }
@@ -256,12 +257,15 @@ const Component = () => {
                     color="primary"
                     style={{ margin: 10, width: 200 }}
                     onClick={() => {
-                        ref.current.reloadRemoteFiles().then((remoteFiles) => {
-                            console.log('reloadRemoteFiles', remoteFiles);
+                        // ref.current.fetchRemoteFiles().then((remoteFiles) => {
+                        //     console.log('fetchRemoteFiles', remoteFiles);
+                        // });
+                        ref.current.fetchRemoteFiles(fetchRemoteFiles).then((remoteFiles) => {
+                            console.log('fetchRemoteFiles', remoteFiles);
                         });
                     }}
                 >
-                    Reload
+                    Fetch Remote Files
                 </Button>
             </div>
         </>

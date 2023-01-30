@@ -89,6 +89,8 @@ export type TGetUploadParams = (
     localFileData: ILocalFileData | ILocalFileData[]
 ) => TUploadParams | Promise<TUploadParams>;
 
+type TFetchRemoteFiles = () => Promise<any>;
+
 export interface IFileManagerRef {
     openFileDialog: () => void;
     addLocalFiles: (files: FileList | File | File[]) => void;
@@ -96,7 +98,7 @@ export interface IFileManagerRef {
     update: () => void;
     upload: () => Promise<any>;
     cancelUpload: () => void;
-    reloadRemoteFiles: () => Promise<IRemoteFileData[]>;
+    fetchRemoteFiles: (request?: TFetchRemoteFiles) => Promise<IRemoteFileData[]>;
     remoteFiles: IRemoteFileData[];
     localFiles: ILocalFileData[];
 }
@@ -120,7 +122,7 @@ export type TOverrides = {
 export interface IFileManagerProps {
     getRoot?: (root: HTMLElement) => void;
     getUploadParams?: TGetUploadParams;
-    fetchRemoteFiles?: () => Promise<Array<IFileData>>;
+    fetchRemoteFiles?: TFetchRemoteFiles;
     fileFieldMapping?: (data: any) => IFileData;
     deleteFile?: (fileData: IRemoteFileData) => Promise<void>;
     downloadFile?: (
@@ -337,31 +339,36 @@ const FileManager = forwardRef(
         const { isLoading, isUploading, forceUpdateTrigger, localFiles, remoteFiles, dragData } =
             state;
 
+        const safeDispatch = useCallback(
+            (value: TAction) => dataRef.current.isMounted && dispatch(value),
+            [dispatch, dataRef.current.isMounted]
+        );
+
         const setIsLoading = useCallback(
-            (state: boolean) => dispatch({ type: 'setIsLoading', result: state }),
-            [dispatch]
+            (state: boolean) => safeDispatch({ type: 'setIsLoading', result: state }),
+            [safeDispatch]
         );
         const setIsUploading = useCallback(
-            (state: boolean) => dispatch({ type: 'setIsUploading', result: state }),
-            [dispatch]
+            (state: boolean) => safeDispatch({ type: 'setIsUploading', result: state }),
+            [safeDispatch]
         );
         const forceUpdate = useCallback(
-            () => dataRef.current.isMounted && dispatch({ type: 'forceUpdate' }),
-            [dispatch, dataRef]
+            () => safeDispatch({ type: 'forceUpdate' }),
+            [safeDispatch]
         );
         const setLocalFiles = useCallback(
-            (files: ILocalFileData[]) => dispatch({ type: 'setLocalFiles', result: files }),
-            [dispatch]
+            (files: ILocalFileData[]) => safeDispatch({ type: 'setLocalFiles', result: files }),
+            [safeDispatch]
         );
         const setRemoteFiles = useCallback(
             (files: IRemoteFileData[] | ((files: IRemoteFileData[]) => IRemoteFileData[])) =>
-                dispatch({ type: 'setRemoteFiles', result: files }),
-            [dispatch]
+                safeDispatch({ type: 'setRemoteFiles', result: files }),
+            [safeDispatch]
         );
         const setDragData = useCallback(
             (data: SameType<boolean, 'active' | 'reject'>) =>
-                dispatch({ type: 'setDragData', dragData: data }),
-            [dispatch]
+                safeDispatch({ type: 'setDragData', dragData: data }),
+            [safeDispatch]
         );
 
         const setSortFilesFunc = useCallback((f) => {
@@ -460,7 +467,7 @@ const FileManager = forwardRef(
                 update: forceUpdate,
                 upload,
                 cancelUpload,
-                reloadRemoteFiles: loadUploadedFiles,
+                fetchRemoteFiles: loadUploadedFiles,
                 remoteFiles,
                 localFiles,
             })
@@ -564,21 +571,22 @@ const FileManager = forwardRef(
                 resolve(processedFiles);
             });
 
-        const loadUploadedFiles = () => {
+        const loadUploadedFiles = (request?: TFetchRemoteFiles) => {
             return new Promise<IRemoteFileData[]>((resolve, reject) => {
                 setIsLoading(true);
-                fetchRemoteFiles()
+                (request ?? fetchRemoteFiles)()
                     .then((remoteFiles) => {
                         if (!dataRef.current.isMounted) return resolve([]);
                         if (!Array.isArray(remoteFiles)) throw Error(errorTxtUploadedFilesNotArray);
                         return processUploadedFiles(remoteFiles).then((result) => {
-                            setIsLoading(false);
                             resolve(result);
                         });
                     })
                     .catch((err) => {
-                        setIsLoading(false);
                         reject(err);
+                    })
+                    .finally(() => {
+                        setIsLoading(false);
                     });
             });
         };
