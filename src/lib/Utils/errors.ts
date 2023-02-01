@@ -44,3 +44,14 @@ export type TCustomError = {
 export type TThrowError = (errorId: TErrorCodes, message: string, data?: any) => void;
 
 export type TOnError = <T extends TInternalError | TCustomError>(args: T | T[]) => void;
+
+//  --------------------------------------------------------------------------------
+
+export const getUploadErrorId = (error: { type: string }): TErrorCodes =>
+    error.type === 'abort'
+        ? 'upload_aborted'
+        : error.type === 'timeout'
+        ? 'upload_timeout'
+        : error.type === 'wrong_result'
+        ? 'upload_wrong_result'
+        : 'upload_error';

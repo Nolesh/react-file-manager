@@ -60,6 +60,7 @@ import {
     TCustomError,
     TThrowError,
     TOnError,
+    getUploadErrorId,
 } from './Utils/errors';
 
 //--------------------------------- TYPES --------------------------------------
@@ -507,15 +508,6 @@ const FileManager = forwardRef(
 
         // ---------------------------------------------------------------------------
 
-        const getUploadErrorId = (error: any): TErrorCodes =>
-            error.type === 'abort'
-                ? 'upload_aborted'
-                : error.type === 'timeout'
-                ? 'upload_timeout'
-                : error.type === 'wrong_result'
-                ? 'upload_wrong_result'
-                : 'upload_error';
-
         const throwError: TThrowError = useCallback(
             (errorId, message, data) =>
                 onError && onError({ errorId, message, ...(data ? { data } : {}) }),
@@ -659,6 +651,23 @@ const FileManager = forwardRef(
                 );
                 const isInUploadBundle = !!uploadItem;
 
+                const updateFileData = (data: Partial<ILocalFileData>) =>
+                    updateLocalFileData(data, fileData.uid, files);
+
+                if (!uploadParams) {
+                    updateFileData({ state: 'uploadError' });
+                    const err: TUploadError = {
+                        errorId: 'upload_error',
+                        message: errorTxtWrongUploadParams,
+                        data: fileData,
+                    };
+                    if (standalone && !isInUploadBundle) {
+                        handleUploadErrors(err);
+                        return null;
+                    }
+                    return Promise.reject(err) as any;
+                }
+
                 const {
                     URL,
                     method,
@@ -677,9 +686,6 @@ const FileManager = forwardRef(
                 const formData = new FormData();
                 formData.append(fileFieldName || 'file', fileData.file);
                 for (const field of Object.keys(fields)) formData.append(field, fields[field]);
-
-                const updateFileData = (data: Partial<ILocalFileData>) =>
-                    updateLocalFileData(data, fileData.uid, files);
 
                 updateFileData({ state: 'uploading' });
 
@@ -842,24 +848,24 @@ const FileManager = forwardRef(
         const obtainUploadParams = useCallback(
             async (fileData: ILocalFileData | ILocalFileData[]) => {
                 const uploadParams =
-                    !!getUploadParams && typeof getUploadParams === 'function'
-                        ? await getUploadParams(fileData)
-                        : ({} as TUploadParams);
+                    (!!getUploadParams &&
+                        typeof getUploadParams === 'function' &&
+                        (await getUploadParams(fileData))) ||
+                    ({} as TUploadParams);
+
                 const { URL } = uploadParams;
 
-                if (!URL) {
-                    setIsUploading(false);
-                    throw Error(errorTxtWrongUploadParams);
-                }
+                if (!URL) return null;
                 return uploadParams;
             },
-            [setIsUploading, getUploadParams]
+            [getUploadParams]
         );
 
         const uploadSingleFile = useCallback(
             async (fileData: ILocalFileData) => {
                 setIsUploading(true);
                 const uploadParams = await obtainUploadParams(fileData);
+                if (!uploadParams) setIsUploading(false);
                 return createSingleFileUploadPromise(fileData, uploadParams, true);
             },
             [setIsUploading, obtainUploadParams, createSingleFileUploadPromise]
@@ -872,10 +878,12 @@ const FileManager = forwardRef(
 
             const uploadPromises = [];
             const uploadingFiles: ILocalFileData[] = [];
-            const uploadParams = await obtainUploadParams(files);
 
             for (const fileData of files) {
                 if (!['local', 'uploadError'].includes(fileData.state)) continue;
+                // Getting upload parameters for each file
+                const uploadParams = await obtainUploadParams(fileData);
+                // Creating an upload promise for each file
                 const promise = createSingleFileUploadPromise(fileData, uploadParams, false, files);
                 uploadPromises.push(promise);
                 uploadingFiles.push(fileData);
@@ -886,7 +894,6 @@ const FileManager = forwardRef(
                 return Promise.resolve();
             }
 
-            // setIsUploading(true);
             runUploadProgressListener(files);
 
             dataRef.current.uploadingFiles = dataRef.current.uploadingFiles.concat(
@@ -912,6 +919,30 @@ const FileManager = forwardRef(
 
             setIsUploading(true);
 
+            const updateFileData = (data: Partial<ILocalFileData>) =>
+                updateLocalFileData(data, undefined, files);
+
+            const processUploadError = (errorId: TErrorCodes, message: string) => {
+                updateFileData({
+                    state: 'uploadError',
+                });
+
+                const reason: TUploadError = {
+                    errorId,
+                    message,
+                    data: files,
+                };
+                handleUploadErrors(reason);
+
+                return Promise.resolve({ status: 'rejected', reason });
+            };
+
+            const uploadParams = await obtainUploadParams(files);
+            if (!uploadParams) {
+                setIsUploading(false);
+                return processUploadError('upload_error', errorTxtWrongUploadParams);
+            }
+
             const {
                 URL,
                 method,
@@ -923,16 +954,13 @@ const FileManager = forwardRef(
                 processResponse,
                 checkResult,
                 processError,
-            } = await obtainUploadParams(files);
+            } = uploadParams;
 
             const formData = new FormData();
             for (const fileData of files) {
                 formData.append(fileFieldName || 'file', fileData.file);
             }
             for (const field of Object.keys(fields)) formData.append(field, fields[field]);
-
-            const updateFileData = (data: Partial<ILocalFileData>) =>
-                updateLocalFileData(data, undefined, files);
 
             updateFileData({ state: 'uploading' });
 
@@ -991,18 +1019,10 @@ const FileManager = forwardRef(
                 .catch((error) => {
                     if (!dataRef.current.isMounted) return null;
 
-                    updateFileData({
-                        state: 'uploadError',
-                    });
-
-                    const reason = {
-                        message: !!processError ? processError(error) : error,
-                        data: files,
-                        errorId: getUploadErrorId(error),
-                    };
-                    handleUploadErrors(reason);
-
-                    return Promise.resolve({ status: 'rejected', reason });
+                    return processUploadError(
+                        getUploadErrorId(error),
+                        !!processError ? processError(error) : error
+                    );
                 })
                 .finally(() => {
                     if (onUploadProgress) onUploadProgress(null, 0, 0);

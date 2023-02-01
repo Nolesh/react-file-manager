@@ -966,12 +966,73 @@ describe('getUploadParams function', () => {
         spy.mockRestore();
     });
 
-    test('should throw an error if the parameters are wrong', async () => {
+    // test.only('should throw an error if the parameters are wrong', async () => {
+    //     const spy = mockSubmitFormData();
+
+    //     const { formDataFields, restore } = mockFormData();
+
+    //     const { rerender, getByRole, findByText, findByTestId } = render(<Manager />);
+
+    //     await findByText('dragNdrop');
+
+    //     const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
+    //     fireEvent.change(input, { target: { files: [mockFile()] } });
+
+    //     await findByTestId('file-container');
+
+    //     const check = async (params?: any) => {
+    //         rerender(<Manager getUploadParams={params} />);
+
+    //         await act(async () => {
+    //             try {
+    //                 await managerRef.current.upload();
+    //             } catch (e) {
+    //                 expect(e.message).toBe(errorTxtWrongUploadParams);
+    //             }
+    //         });
+    //     };
+
+    //     const spyConsoleErr = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    //     await check(() => ({}));
+    //     await check(null);
+    //     await check({});
+
+    //     restore();
+    //     spyConsoleErr.mockRestore();
+    //     spy.mockRestore();
+    //     jest.runAllTimers();
+    // });
+
+    test('should test cases if the parameters are wrong', async () => {
+        const expectedError = {
+            errorId: 'upload_error',
+            message: 'Wrong upload parameters. Make sure the "getUploadParams" function is correct',
+            data: expect.any(Object),
+        };
+        let err: any = null;
+
+        const expectedResult = {
+            status: 'rejected',
+            reason: expectedError,
+        };
+
         const spy = mockSubmitFormData();
 
         const { formDataFields, restore } = mockFormData();
 
-        const { rerender, getByRole, findByText, findByTestId } = render(<Manager />);
+        const { rerender, getByRole, getByTitle, findByText, findByTestId } = render(
+            <Manager
+                getUploadParams={
+                    (() => {
+                        Wrong: 'param';
+                    }) as any
+                }
+                onError={(e) => {
+                    err = e;
+                }}
+            />
+        );
 
         await findByText('dragNdrop');
 
@@ -980,15 +1041,19 @@ describe('getUploadParams function', () => {
 
         await findByTestId('file-container');
 
-        const check = async (params?: any) => {
-            rerender(<Manager getUploadParams={params} />);
+        act(() => {
+            fireEvent.click(getByTitle('upload'));
+        });
+        await waitFor(() => expect(getByRole('fileitem')).toHaveClass('display-item-upload-error'));
+
+        expect(err).toEqual(expectedError);
+
+        const check = async (params?: any, oneRequest = false) => {
+            rerender(<Manager getUploadParams={params} uploadFilesInOneRequest={oneRequest} />);
 
             await act(async () => {
-                try {
-                    await managerRef.current.upload();
-                } catch (e) {
-                    expect(e.message).toBe(errorTxtWrongUploadParams);
-                }
+                let res = await managerRef.current.upload();
+                expect(res).toEqual(oneRequest ? expectedResult : [expectedResult]);
             });
         };
 
@@ -998,10 +1063,17 @@ describe('getUploadParams function', () => {
         await check(null);
         await check({});
 
-        restore();
+        act(() => {
+            jest.advanceTimersByTime(100);
+        });
+
+        await check(() => ({}), true);
+        await check(null, true);
+        await check({}, true);
+
         spyConsoleErr.mockRestore();
+        restore();
         spy.mockRestore();
-        jest.runAllTimers();
     });
 });
 

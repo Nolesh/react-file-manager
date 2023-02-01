@@ -391,14 +391,21 @@ export const CustomControlComponent: TControlFieldComponent = ({
                     id={fileData.uid}
                     actions={[
                         {
-                            name: 'Upload',
-                            action: uploadFile && uploadFile.bind(null, fileData as any),
-                        },
-                        {
                             name: 'Remove',
                             action: deleteFile && deleteFile.bind(null, fileData),
                         },
-                    ]}
+                    ]
+                        .concat(
+                            uploadFile
+                                ? [
+                                      {
+                                          name: 'Upload',
+                                          action: uploadFile.bind(null, fileData as any),
+                                      },
+                                  ]
+                                : null
+                        )
+                        .filter((x) => x != null)}
                     buttonProps={{
                         title: 'File menu',
                         tabIndex: tabIndex,

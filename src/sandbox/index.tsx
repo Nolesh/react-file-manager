@@ -21,6 +21,7 @@ import FileManager, {
     TGetUploadParams,
     TFileValidator,
     TOnError,
+    ILocalFileData,
 } from '../lib';
 
 import { Button, Checkbox, FormControlLabel, Paper, Typography } from '@material-ui/core';
@@ -69,71 +70,78 @@ const fetchRemoteFiles = () => {
     // return Promise.resolve([])
 };
 
-const uploadFileParams: TGetUploadParams = (localFileData) =>
-    Array.isArray(localFileData)
-        ? {
-              // Upload multiple files in one request
-              URL: `/api/multipleFileUpload`,
-              headers: {
-                  // Let's pass additional parameters to the server such as fileId and description using headers
-                  attachments: JSON.stringify(
-                      localFileData.map((fileData) => ({
-                          fileId: fileData.uid,
-                          ...((!!fileData.description && {
-                              description: encodeURIComponent(fileData.description),
-                          }) ||
-                              {}),
-                      }))
-                  ),
+// ----------------------------------------------------------------------------------------------
+// Upload multiple files in one request
+const uploadFilesInOneRequestParams: TGetUploadParams = (localFileData: ILocalFileData[]) => ({
+    URL: `/api/multipleFileUpload`,
+    headers: {
+        // Let's pass additional parameters to the server such as fileId and description using headers
+        attachments: JSON.stringify(
+            localFileData.map((fileData) => ({
+                fileId: fileData.uid,
+                ...((!!fileData.description && {
+                    description: encodeURIComponent(fileData.description),
+                }) ||
+                    {}),
+            }))
+        ),
 
-                  // 'Content-Type': 'application/octet-stream',
-                  // fileNames: encodeURIComponent(files.map(f => f.fileName).join('☆')),
-                  // fileSizes: encodeURIComponent(files.map(f => f.fileSize).join('☆'))
-              },
-              fileFieldName: 'fileToUpload',
-              // fields: {
-              //     fileIds: JSON.stringify(files.map(f => f.uid)),
-              //     ...(( !!files.some(f => f.description) && {descriptions: JSON.stringify(files.map(f => f.description)) }) || {})
-              // },
-              // body: new Blob(files.map(f => f.file)),
-              // method: 'PUT',
-              // timeout: 0,
-              // If the server returns anything other than uploaded file data, we should return one of the following:
-              // 1. correct file data created from the response
-              // 2. files passed as function argument
-              // 3. null (remove uploaded files from the list)
-              processResponse: (response) => (response.result ? localFileData : 'fail'),
-              // processResponse: (response) => localFileData,
-              checkResult: (result) => !(result === 'fail'),
-              processError: getErrorMessage,
-          }
-        : {
-              // Standard uploading method
-              URL: `/api/singleFileUpload`,
-              headers: {
-                  // attachment: JSON.stringify({
-                  //     fileId: files[0].uid,
-                  //     ...((!!files[0].description && { description: encodeURIComponent(files[0].description) }) || {}),
-                  // }),
-                  // 'Content-Type': 'application/octet-stream',
-                  // 'filename': files[0].fileName
-              },
-              fileFieldName: 'fileToUpload',
-              // Let's pass additional parameters to the server such as fileId and description using FormData fields
-              fields: {
-                  fileId: localFileData.uid,
-                  ...((!!localFileData.description && { description: localFileData.description }) ||
-                      {}),
-              },
-              // body: files[0].file,
-              // method: 'PUT',
-              // timeout: 0,
-              // Extracts an array of files or a single file from an object because response was deliberately wrapped in an object
-              //   processResponse: (response) => response?.file ?? response?.files,
-              processResponse: (response) => localFileData,
-              // checkResult: (result) => result.file_id === localFileData.uid,
-              processError: getErrorMessage,
-          };
+        // 'Content-Type': 'application/octet-stream',
+        // fileNames: encodeURIComponent(files.map(f => f.fileName).join('☆')),
+        // fileSizes: encodeURIComponent(files.map(f => f.fileSize).join('☆'))
+    },
+    fileFieldName: 'fileToUpload',
+    // fields: {
+    //     fileIds: JSON.stringify(files.map(f => f.uid)),
+    //     ...(( !!files.some(f => f.description) && {descriptions: JSON.stringify(files.map(f => f.description)) }) || {})
+    // },
+    // body: new Blob(files.map(f => f.file)),
+    // method: 'PUT',
+    // timeout: 0,
+    // If the server returns anything other than uploaded file data, we should return one of the following:
+    // 1. correct file data (must match data returned by fileFieldMapping) created from the response
+    // 2. files passed as function argument
+    // 3. null (remove uploaded files from the list)
+    processResponse: (response) => (response.result ? localFileData : 'fail'),
+    // processResponse: (response) => localFileData,
+    checkResult: (result) => !(result === 'fail'),
+    processError: getErrorMessage,
+});
+
+const uploadFilesStandardParams: TGetUploadParams = (localFileData: ILocalFileData) => ({
+    URL: `/api/singleFileUpload`,
+    headers: {
+        // attachment: JSON.stringify({
+        //     fileId: localFileData.uid,
+        //     ...((!!localFileData.description && { description: encodeURIComponent(localFileData.description) }) || {}),
+        // }),
+        // 'Content-Type': 'application/octet-stream',
+        // 'filename': localFileData.fileName
+    },
+    // Let's pass additional parameters to the server such as fileId and description using FormData fields
+    fields: {
+        fileId: localFileData.uid,
+        ...((!!localFileData.description && { description: localFileData.description }) || {}),
+    },
+    fileFieldName: 'fileToUpload',
+    // body: Array.isArray(localFileData) ? new Blob(localFileData.map(x => x.file)) : localFileData.file,
+    // method: 'PUT',
+    // timeout: 0,
+    // Extracts an array of files or a single file from an object because response was deliberately wrapped in an object
+    // processResponse: (response) => response?.file ?? response?.files,
+    processResponse: (response) => localFileData,
+    // checkResult: (result) => result.file_id === localFileData.uid,
+    processError: getErrorMessage,
+});
+
+const uploadFileParams: TGetUploadParams = (localFileData) =>
+    // Array.isArray(localFileData)
+    // OR
+    uploadFilesInOneRequest
+        ? uploadFilesInOneRequestParams(localFileData)
+        : uploadFilesStandardParams(localFileData);
+
+// ----------------------------------------------------------------------------------------------
 
 const generateFilePreview: IFileManagerProps['filePreview'] = (file) => {
     if (file.type === 'application/pdf') {
@@ -434,7 +442,7 @@ export const Manager: FC = (): ReactElement => {
                         // sortFiles={handleSorting}
                         filePreview={generateFilePreview}
                         // fileValidator={fileValidator}
-                        // onFilesUploaded={onFilesUploaded}
+                        onFilesUploaded={onFilesUploaded}
                         onUploadProgress={(progress, sentBytes, totalBytes) => {
                             console.log('progress', progress, sentBytes, totalBytes);
                             progressRef.current.style.display = !!progress ? 'block' : 'none';
