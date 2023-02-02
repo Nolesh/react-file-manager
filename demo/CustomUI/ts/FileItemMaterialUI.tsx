@@ -157,8 +157,8 @@ const renderFileItemWithClasses = ({
     getItemProps,
     getCommonProps,
     getActions,
-    classes, // additional property that contains styles
-}: IFileItemComponentProps & { classes: any }): ReactElement => {
+}: IFileItemComponentProps): ReactElement => {
+    const classes = useStyles();
     const { root, formatSize, isLocalFile, disabled, isDragActive, noKeyboard, readOnly } =
         getCommonProps();
     const {
@@ -379,12 +379,5 @@ const renderFileItemWithClasses = ({
     );
 };
 
-export const createMaterialUIFileItem = (): TFileItemComponent => {
-    const classes = useStyles();
-
-    // Let's pass classes to custom render function
-    const customRenderFileItem: TFileItemComponent = (args) =>
-        renderFileItemWithClasses({ ...args, classes });
-
-    return customRenderFileItem;
-};
+export const MaterialFileItemRenderer: TFileItemComponent = (args) =>
+    renderFileItemWithClasses({ ...args });

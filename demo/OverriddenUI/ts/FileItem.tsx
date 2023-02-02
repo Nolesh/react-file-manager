@@ -9,7 +9,36 @@ import {
     TSizeFieldStyle,
     TControlFieldMenu,
     TControlFieldButtons,
+    IFileData,
+    TControlFieldComponent,
+    ActionMenu,
+    Button,
+    TSizeFieldComponent,
+    TInputFieldComponent,
+    IInputFieldProps,
+    TThumbnailFieldStyles,
 } from '../../../src/lib';
+
+import { CircularProgress, MenuItem, Select } from '@material-ui/core';
+
+const SelectField = (props: {
+    data: string[];
+    disabled: boolean;
+    inputProps: IInputFieldProps;
+}) => {
+    const [fileName] = useState(props.inputProps.value);
+    const data = Array.from(new Set([...props.data, fileName]));
+
+    return (
+        <Select fullWidth={true} disabled={props.disabled} {...props.inputProps}>
+            {data.map((x, i) => (
+                <MenuItem key={i} value={x}>
+                    {x}
+                </MenuItem>
+            ))}
+        </Select>
+    );
+};
 
 export const CustomFileItemRootStyles: TFileItemRootStyles = {
     base: {
@@ -50,7 +79,37 @@ export const CustomFileItemRootStyles: TFileItemRootStyles = {
 
 const Loader = () => <span className="loader"></span>;
 
-export const CustomFileItemThumbnail: TThumbnailFieldComponent = ({
+const formatDuration = (sec: number) => (
+    (sec = sec ? sec : 0), new Date(sec * 1000).toISOString().substr(11, 8)
+);
+
+const VideoThumbnail = ({
+    src,
+    duration,
+    videoWidth,
+    videoHeight,
+}: IFileData['previewData']): React.ReactNode => {
+    return (
+        <>
+            <video
+                width="60"
+                height="60"
+                muted
+                playsInline
+                src={src}
+                onContextMenu={(e: React.MouseEvent) => {
+                    e.preventDefault();
+                }}
+            />
+            <div className="video-meta video-meta-header">
+                {videoWidth}x{videoHeight}
+            </div>
+            <div className="video-meta video-meta-footer">{formatDuration(duration)}</div>
+        </>
+    );
+};
+
+export const CustomFileItemThumbnailComponent: TThumbnailFieldComponent = ({
     fileData,
     readOnly,
     disabled,
@@ -68,6 +127,8 @@ export const CustomFileItemThumbnail: TThumbnailFieldComponent = ({
         <div>
             {fileData.previewData && !fileData.previewData.src ? (
                 <Loader />
+            ) : fileData?.previewData?.tag === 'video' && fileData.previewData.src ? (
+                VideoThumbnail(fileData.previewData)
             ) : fileData.file?.type?.startsWith('audio/') && fileData.previewData.src ? (
                 <AudioThumbnail
                     src={fileData.previewData.src}
@@ -105,6 +166,26 @@ export const CustomFileItemThumbnail: TThumbnailFieldComponent = ({
     );
 };
 
+export const CustomFileItemThumbnailStyles: TThumbnailFieldStyles = ({
+    fileData,
+    readOnly,
+    disabled,
+}) => ({
+    container: { border: '1px dashed red' },
+    type: { color: 'red' },
+    loading: { fill: 'red' },
+    audio: {
+        type: { color: 'yellow' },
+        duration: { color: 'yellow' },
+        buttonContainer: { background: 'red' },
+        buttonStart: { color: 'white' },
+        buttonStop: { color: 'white' },
+    },
+    image: { maxWidth: 48, maxHeight: 48 },
+    duration: { color: 'red' },
+    default: { color: 'red' },
+});
+
 export const CustomFileItemNameStyles: TInputFieldStyles = ({ fileData, readOnly, disabled }) => ({
     readOnlyText: {
         style: {
@@ -127,6 +208,21 @@ export const CustomFileItemNameStyles: TInputFieldStyles = ({ fileData, readOnly
     },
 });
 
+export const CustomFileItemNameComponent: TInputFieldComponent = (props) => {
+    const readOnlyOrDisabled =
+        props.disabled || props.readOnly || props.fileData.readOnly || props.fileData.disabled;
+
+    return (
+        <SelectField
+            data={['Antares', 'Betelgeuse', 'Calvera', 'Deneb']}
+            disabled={
+                (readOnlyOrDisabled || !props.fileData.editMode) && props.fileData.state !== 'local'
+            }
+            inputProps={props.getInputFieldProps()}
+        />
+    );
+};
+
 export const CustomFileItemSizeStyle: TSizeFieldStyle = ({ fileData, readOnly, disabled }) => {
     const noBorder = readOnly || disabled || fileData.disabled || fileData.readOnly;
     return {
@@ -137,6 +233,25 @@ export const CustomFileItemSizeStyle: TSizeFieldStyle = ({ fileData, readOnly, d
             borderBottom: noBorder ? 'none' : '1px solid black',
         },
     };
+};
+
+export const CustomFileItemSizeComponent: TSizeFieldComponent = ({
+    fileData,
+    readOnly,
+    disabled,
+    formatSize,
+}) => {
+    const readOnlyOrDisabled = readOnly || disabled || fileData.disabled || fileData.readOnly;
+    return (
+        <div
+            style={{
+                color: readOnlyOrDisabled ? 'gray' : 'white',
+                fontWeight: 'bold',
+            }}
+        >
+            {formatSize(fileData.fileSize).toUpperCase()}
+        </div>
+    );
 };
 
 export const CustomActionMenuProps: TControlFieldMenu = ({ fileData, readOnly, disabled }) => {
@@ -161,6 +276,114 @@ export const CustomButtonsProps: TControlFieldButtons = ({ fileData, readOnly, d
     };
 };
 
+export const CustomControlComponent: TControlFieldComponent = ({
+    fileData,
+    readOnly,
+    disabled,
+    noKeyboard,
+    changeDescription,
+    changeDescriptionMode,
+    confirmDescriptionChanges,
+    deleteFile,
+    downloadFile,
+    undoDescriptionChanges,
+    viewFile,
+    uploadFile,
+}) => {
+    const tabIndex = noKeyboard ? -1 : 0;
+    const disabledOrReadonly = disabled || fileData.disabled || readOnly || fileData.readOnly;
+    const { cancelUpload } = fileData;
+
+    return (
+        <div>
+            {!['uploaded', 'uploading', 'deletionError'].includes(fileData.state) && (
+                <ActionMenu
+                    key={`actionMenu-${fileData.uid}`}
+                    id={fileData.uid}
+                    actions={[
+                        {
+                            name: 'Remove',
+                            action: deleteFile && deleteFile.bind(null, fileData),
+                        },
+                    ]
+                        .concat(
+                            uploadFile
+                                ? [
+                                      {
+                                          name: 'Upload',
+                                          action: uploadFile.bind(null, fileData as any),
+                                      },
+                                  ]
+                                : null
+                        )
+                        .filter((x) => x != null)}
+                    buttonProps={{
+                        title: 'File menu',
+                        tabIndex: tabIndex,
+                    }}
+                    buttonChildren={<div style={{ fontSize: 28 }}>&equiv;</div>}
+                    disabled={disabled || fileData.disabled}
+                />
+            )}
+            {fileData.state === 'uploading' && cancelUpload && (
+                <Button
+                    title="Cancel upload"
+                    className="icon-button"
+                    tabIndex={tabIndex}
+                    onClick={cancelUpload}
+                >
+                    &#x02717;
+                </Button>
+            )}
+            {fileData.state === 'uploading' && !cancelUpload && (
+                <CircularProgress style={{ color: 'white' }} />
+            )}
+            {['uploaded', 'deletionError'].includes(fileData.state) && !fileData.editMode && (
+                <ActionMenu
+                    key={`actionMenu-${fileData.uid}`}
+                    id={fileData.uid}
+                    actions={[
+                        {
+                            name: 'View',
+                            action: viewFile.bind(null, fileData),
+                        },
+                        {
+                            name: 'Download',
+                            action: downloadFile.bind(null, fileData),
+                        },
+                    ]}
+                    buttonProps={{
+                        title: 'File menu',
+                        tabIndex: tabIndex,
+                    }}
+                    buttonChildren={<div style={{ fontSize: 28 }}>&equiv;</div>}
+                    disabled={disabled || fileData.disabled}
+                />
+            )}
+            {['uploaded', 'deletionError'].includes(fileData.state) && fileData.editMode && (
+                <>
+                    <Button
+                        title="Confirm"
+                        tabIndex={tabIndex}
+                        disabled={disabledOrReadonly}
+                        onClick={confirmDescriptionChanges}
+                    >
+                        &#x02713;
+                    </Button>
+                    <Button
+                        title="Cancel"
+                        tabIndex={tabIndex}
+                        disabled={disabledOrReadonly}
+                        onClick={undoDescriptionChanges}
+                    >
+                        &#x02717;
+                    </Button>
+                </>
+            )}
+        </div>
+    );
+};
+
 export const CustomProgressBar: TProgressBarComponent = (progress) => {
     // return <div style={{position:'absolute', left:0, height: 3, background: 'rgb(0 120 255)', width:`calc(${progress}% - 7px)`}}></div>;
     return (
@@ -172,7 +395,7 @@ export const CustomProgressBar: TProgressBarComponent = (progress) => {
     );
 };
 
-export const CustomReadOnlyLabel = () => (
+export const readOnlyIconComponent = () => (
     <div
         style={{ position: 'absolute', bottom: 1, right: 1, fontSize: 12, cursor: 'default' }}
         title="Read-only mode"

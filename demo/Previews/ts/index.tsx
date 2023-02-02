@@ -191,7 +191,7 @@ const Component = () => {
                     }}
                     overrides={{
                         FileItem: {
-                            readOnlyLabelComponent: () => (
+                            readOnlyIconComponent: () => (
                                 <div
                                     style={{
                                         position: 'absolute',
@@ -205,7 +205,7 @@ const Component = () => {
                                     &#x1F512;
                                 </div>
                             ),
-                            // readOnlyLabelComponent: () => <div></div>,
+                            // readOnlyIconComponent: () => <div></div>,
                             thumbnailFieldComponent: CustomFileItemThumbnail,
                         },
                     }}

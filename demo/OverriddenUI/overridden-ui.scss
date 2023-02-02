@@ -240,3 +240,21 @@ $errorColor: #f4645f;
     position: absolute;
     width: 40px;
 }
+
+.video-meta {
+    background: #0009;
+    color: white;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+}
+
+.video-meta-header {
+    font-size: 10px;
+    top: 0;
+}
+
+.video-meta-footer {
+    bottom: 0;
+    font-size: 11px;
+}

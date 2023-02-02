@@ -10,13 +10,17 @@ import '../overridden-ui.scss';
 
 import {
     CustomFileItemRootStyles,
+    CustomFileItemThumbnailStyles,
+    CustomFileItemThumbnailComponent,
     CustomFileItemNameStyles,
-    CustomFileItemThumbnail,
+    CustomFileItemNameComponent,
     CustomFileItemSizeStyle,
+    CustomFileItemSizeComponent,
     CustomActionMenuProps,
     CustomButtonsProps,
+    CustomControlComponent,
     CustomProgressBar,
-    CustomReadOnlyLabel,
+    readOnlyIconComponent,
 } from './FileItem';
 
 // Retrieves the error message from the server error response
@@ -51,6 +55,31 @@ const handleErrors = (err) => {
     } else {
         alert(err.message);
     }
+};
+
+// It will take effect if thumbnailFieldComponent is overridden by CustomFileItemThumbnail
+const filePreview = (file) => {
+    // Overrides the default implementation for video files
+    if (file.type.startsWith('video/')) {
+        return new Promise((resolve) => {
+            const objectUrl = URL.createObjectURL(file);
+            const video = document.createElement('video');
+            video.src = objectUrl;
+            video.onloadedmetadata = () => {
+                const { duration, videoWidth, videoHeight } = video;
+                // return required data for video thumbnail
+                resolve({ src: objectUrl, duration, videoWidth, videoHeight, tag: 'video' });
+            };
+        });
+    }
+    // Overrides default implementation for images
+    else if (file.type.startsWith('image/')) {
+        const imageUrl = URL.createObjectURL(file);
+        return Promise.resolve(imageUrl);
+    }
+
+    // We must return a promise that resolves with a 'null' or 'undefined' to use the default implementation for the rest file types
+    return Promise.resolve();
 };
 
 const basicParams = {
@@ -89,6 +118,60 @@ const basicParams = {
     onError: handleErrors,
 };
 
+const overrides = {
+    // uidGenerator: () => `uid-${new Date().getTime()}-${Math.random()*100}`, // uncomment to override the default implementation
+    // fileSizeFormatter: (size) => `${size.toLocaleString()} B`, // uncomment to override the default implementation
+    Root: {
+        // All options are independent and optional.
+        // hideHeader: true,
+        // hideFooter: true,
+        texts: {
+            // headerFileType: 'Type',
+            // headerFileName: 'Name',
+            // headerFileSize: 'Size',
+            // footer: 'Click here to open file selector',
+            // dragActiveAccept: 'Drop your file(s)',
+            dragActiveReject: 'Some files will NOT be accepted',
+            loading: 'Loading...',
+            defaultText:
+                'Drag & drop you file(s) here\nor click on the footer or empty area to open file selector',
+            defaultTextDisabled: 'File manager is disabled',
+        },
+        classNames: {
+            dropZone: 'drop-zone-overridden',
+            activeAccept: 'drop-zone-active-accept-overridden',
+            activeReject: 'drop-zone-active-reject-overridden',
+            header: 'drop-zone-header-overridden',
+            footer: 'drop-zone-footer-overridden',
+        },
+        styles: {
+            // dropZone: {width: 460, height: 250, overflowY: 'scroll'},
+            // header: { background: '#3f52b5', color: 'white' },
+            // footer: { background: '#3f52b5', color: 'white' },
+        },
+    },
+    FileItem: {
+        // All options are independent and optional.
+        titles: {
+            menuButtonTitle: 'File actions',
+        },
+        rootStyles: CustomFileItemRootStyles,
+        thumbnailFieldStyles: CustomFileItemThumbnailStyles,
+        thumbnailFieldComponent: CustomFileItemThumbnailComponent, // Overrides thumbnailFieldStyles
+        inputFieldStyles: CustomFileItemNameStyles,
+        inputFieldComponent: CustomFileItemNameComponent, // Overrides inputFieldStyles
+        sizeFieldStyle: CustomFileItemSizeStyle,
+        sizeFieldComponent: CustomFileItemSizeComponent, // Overrides sizeFieldStyle
+        controlField: {
+            menu: CustomActionMenuProps,
+            buttons: CustomButtonsProps,
+            component: CustomControlComponent, // Overrides all options above (controlField)!
+        },
+        progressBarComponent: CustomProgressBar,
+        readOnlyIconComponent: readOnlyIconComponent,
+    },
+};
+
 const Component = () => {
     return (
         <div style={{ textAlign: 'center' }}>
@@ -98,74 +181,9 @@ const Component = () => {
 
             <FileManager
                 {...basicParams}
-                // filePreview={(file)=> {
-                //     // Overrides the default implementation for video files
-                //     // Will take effect if thumbnail is overridden by CustomFileItemThumbnail
-                //     if (file.type.startsWith('video/')) {
-                //         return new Promise((resolve) => {
-                //             const objectUrl = URL.createObjectURL(file);
-                //             const video = document.createElement('video');
-                //             video.src = objectUrl;
-                //             video.onloadedmetadata = () => {
-                //                 const { duration, videoWidth, videoHeight } = video;
-                //                 // return required data for video thumbnail
-                //                 resolve({ src: objectUrl, duration, videoWidth, videoHeight, tag: 'video' });
-                //             };
-                //         });
-                //     }
-                //
-                //     // We must return a promise that resolves with a 'null' or 'undefined' to use the default implementation for the rest file types
-                //     return Promise.resolve();
-                // }}
-                overrides={{
-                    // uidGenerator: () => `uid-${new Date().getTime()}-${Math.random()*100}`, // uncomment to override the default implementation
-                    // fileSizeFormatter: (size) => `${size.toLocaleString()} B`, // uncomment to override the default implementation
-                    Root: {
-                        // All options are independent and optional.
-                        // hideHeader: true,
-                        // hideFooter: true,
-                        texts: {
-                            // headerFileType: 'Type',
-                            // headerFileName: 'Name',
-                            // headerFileSize: 'Size',
-                            // footer: 'Click here to open file selector',
-                            // dragActiveAccept: 'Drop your file(s)',
-                            dragActiveReject: 'Some files will NOT be accepted',
-                            loading: 'Loading...',
-                            defaultText:
-                                'Drag & drop you file(s) here\nor click on the footer or empty area to open file selector',
-                            defaultTextDisabled: 'File manager is disabled',
-                        },
-                        classNames: {
-                            dropZone: 'drop-zone-overridden',
-                            activeAccept: 'drop-zone-active-accept-overridden',
-                            activeReject: 'drop-zone-active-reject-overridden',
-                            header: 'drop-zone-header-overridden',
-                            footer: 'drop-zone-footer-overridden',
-                        },
-                        styles: {
-                            // dropZone: {width: 460, height: 250, overflowY: 'scroll'},
-                            // header: { background: '#3f52b5', color: 'white' },
-                            // footer: { background: '#3f52b5', color: 'white' },
-                        },
-                    },
-                    FileItem: {
-                        // All options are independent and optional.
-                        titles: {
-                            menuButtonTitle: 'File actions',
-                        },
-                        rootStyles: CustomFileItemRootStyles,
-                        thumbnailFieldComponent: CustomFileItemThumbnail,
-                        inputFieldStyles: CustomFileItemNameStyles,
-                        sizeFieldStyle: CustomFileItemSizeStyle,
-                        controlField: {
-                            menu: CustomActionMenuProps,
-                            buttons: CustomButtonsProps,
-                        },
-                        progressBarComponent: CustomProgressBar,
-                        readOnlyLabelComponent: CustomReadOnlyLabel,
-                    },
-                }}
+                // filePreview={filePreview}
+                overrides={overrides}
+                addFileDescription
                 // uploadFilesInOneRequest
                 // autoUpload
             />

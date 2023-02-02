@@ -27,7 +27,8 @@ const SelectField = (props: {
     disabled: boolean;
     inputProps: IInputFieldProps;
 }) => {
-    const data = Array.from(new Set([...props.data, props.inputProps.value]));
+    const [fileName] = useState(props.inputProps.value);
+    const data = Array.from(new Set([...props.data, fileName]));
 
     return (
         <Select fullWidth={true} disabled={props.disabled} {...props.inputProps}>
@@ -289,16 +290,10 @@ export const CustomFileItemNameComponent: TInputFieldComponent = (props) => {
 
     return (
         <SelectField
-            data={[
-                'Antares',
-                'Betelgeuse',
-                'Calvera',
-                'Deneb',
-                props.fileData.oldDescription ||
-                    props.fileData.description ||
-                    props.fileData.fileName,
-            ]}
-            disabled={readOnlyOrDisabled || !props.fileData.editMode}
+            data={['Antares', 'Betelgeuse', 'Calvera', 'Deneb']}
+            disabled={
+                (readOnlyOrDisabled || !props.fileData.editMode) && props.fileData.state !== 'local'
+            }
             inputProps={props.getInputFieldProps()}
         />
     );

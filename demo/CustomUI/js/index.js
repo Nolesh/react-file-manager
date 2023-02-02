@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 import { Checkbox, FormControlLabel, Typography } from '@material-ui/core';
 
@@ -7,7 +7,7 @@ import '../custom-ui.scss';
 
 import { SimpleRoot } from './SimpleRoot';
 import { ComplexRoot } from './ComplexRoot';
-import { createMaterialUIFileItem } from './FileItemMaterialUI';
+import { MaterialFileItemRenderer } from './FileItemMaterialUI';
 
 // Retrieves the error message from the server error response
 // Since our error response is an object containing a status and a message,
@@ -82,6 +82,18 @@ const basicParams = {
 const Component = () => {
     const [complexRoot, setComplexRoot] = useState(true);
 
+    const overrides = useMemo(
+        () => ({
+            Root: {
+                component: complexRoot ? ComplexRoot : SimpleRoot,
+            },
+            FileItem: {
+                component: MaterialFileItemRenderer,
+            },
+        }),
+        [complexRoot]
+    );
+
     return (
         <div style={{ textAlign: 'center' }}>
             <Typography variant="h5" style={{ padding: 10 }}>
@@ -100,18 +112,7 @@ const Component = () => {
                 />
             </div>
 
-            <FileManager
-                {...basicParams}
-                addFileDescription
-                overrides={{
-                    Root: {
-                        component: complexRoot ? ComplexRoot : SimpleRoot,
-                    },
-                    FileItem: {
-                        component: createMaterialUIFileItem(),
-                    },
-                }}
-            />
+            <FileManager {...basicParams} addFileDescription overrides={overrides} />
         </div>
     );
 };

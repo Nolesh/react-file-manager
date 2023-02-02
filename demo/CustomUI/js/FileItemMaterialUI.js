@@ -146,8 +146,8 @@ const renderFileItemWithClasses = ({
     getItemProps,
     getCommonProps,
     getActions,
-    classes, // additional property that contains styles
 }) => {
+    const classes = useStyles();
     const { root, formatSize, isLocalFile, disabled, isDragActive, noKeyboard, readOnly } =
         getCommonProps();
     const {
@@ -368,11 +368,4 @@ const renderFileItemWithClasses = ({
     );
 };
 
-export const createMaterialUIFileItem = () => {
-    const classes = useStyles();
-
-    // Let's pass classes to custom render function
-    const customRenderFileItem = (args) => renderFileItemWithClasses({ ...args, classes });
-
-    return customRenderFileItem;
-};
+export const MaterialFileItemRenderer = (args) => renderFileItemWithClasses({ ...args });
