@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.0](https://github.com/Nolesh/react-file-manager/compare/v1.1.1...v2.0.0) (2023-02-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* "reloadRemoteFiles" has been renamed to "fetchRemoteFiles"
+* **overrides:** some keys of the `overrides` object have been renamed
+
+### Features
+
+* fetch remote files using various requests ([aedf0aa](https://github.com/Nolesh/react-file-manager/commit/aedf0aaab8a4ffbfe6e5ecf0a116c28f83e568ea))
+* **overrides:** add ability to replace file item fields ([913de8c](https://github.com/Nolesh/react-file-manager/commit/913de8c6d07d22d2042294e00084b299afe3a35d))
+
+
+### Bug Fixes
+
+* call getUploadParams on bulk upload ([b096659](https://github.com/Nolesh/react-file-manager/commit/b0966591572c85188e90fd49188b9eaa8ea7301d))
+* **style:** hide container footer ([e247c44](https://github.com/Nolesh/react-file-manager/commit/e247c449aa40823ae6471ad6f5e175c072c94e22))
+
 ### [1.1.1](https://github.com/Nolesh/react-file-manager/compare/v1.0.1...v1.1.1) (2023-01-25)
 
 
