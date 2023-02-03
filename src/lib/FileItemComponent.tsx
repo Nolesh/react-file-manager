@@ -36,7 +36,7 @@ export interface ILocalFileData extends IRemoteFileData {
     cancelUpload?: () => void;
     uploadedSize: number;
     totalSize: number;
-    shouldBeRemoved?: boolean;
+    // shouldBeRemoved?: boolean; // This is only for internal purposes, so it was hidden
 }
 
 export interface IItemActions {

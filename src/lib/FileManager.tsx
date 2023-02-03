@@ -1174,7 +1174,7 @@ const FileManager = forwardRef(
             itemMountStates.current = [];
 
             // Delete local files marked as removed
-            const wasteFiles = localFiles.filter((f) => f.shouldBeRemoved);
+            const wasteFiles = localFiles.filter((f: any) => f.shouldBeRemoved);
             deleteLocalFile(wasteFiles);
 
             // Grouping common properties
