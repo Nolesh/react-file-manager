@@ -2,7 +2,7 @@
 
 # React File Manager
 [![npm (scoped)](https://img.shields.io/npm/v/@nolesh/react-file-manager)](https://www.npmjs.com/package/@nolesh/react-file-manager)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/nolesh/react-file-manager/Test)](https://github.com/Nolesh/react-file-manager/actions/workflows/test.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/nolesh/react-file-manager/test.yml?branch=main)](https://github.com/Nolesh/react-file-manager/actions/workflows/test.yml)
 [![Coverage Status](https://coveralls.io/repos/github/Nolesh/react-file-manager/badge.svg)](https://coveralls.io/github/Nolesh/react-file-manager)
 [![GitHub](https://img.shields.io/badge/types-included-brightgreen)](/LICENSE)
 [![GitHub](https://img.shields.io/github/license/nolesh/react-file-manager)](https://www.npmjs.com/package/@nolesh/react-file-manager)
@@ -182,7 +182,7 @@ const MySimpleFileManager = () => (
 |noDrag|`bool`|`false`|If true, disables drag 'n' drop.|
 |noKeyboard|`bool`|`false`|If true, disables SPACE/ENTER to open the native file selection dialog.|
 |autoUpload|`bool`|`false`|If true, automatically uploads files as soon as they are accepted.|
-|ignoreFileDuplicates|`union`|`'none'`|Checks local (accepted) and/or remote (uploaded) files for duplicates on acceptance and skips them (throw an error with `file_exists` code) if they exist and the appropriate mode is selected.<br>One of type: `'none', 'local', 'remote', 'all'`.|
+|ignoreFileDuplicates|`'none'\|'local'\|'remote'\|'all'`|`'none'`|Checks local (accepted) and/or remote (uploaded) files for duplicates on acceptance and skips them (throw an error with `file_exists` code) if they exist and the appropriate mode is selected.<br>One of type: `'none', 'local', 'remote', 'all'`.|
 |preventDropOnDocument|`bool`|`false`|If false, allow dropped items to take over the current browser window.|
 |addFileDescription|`bool`|`false`|Allow the user to add custom description to file.|
 |uploadFilesInOneRequest|`bool`|`false`|If true, multiple files will be uploaded in one request.|
@@ -214,8 +214,8 @@ This property allows the user to override the appearance and text of all compone
 ```tsx
 {
 	uidGenerator?: () => string,
-	fileSizeFormatter?: (size: number) => string,
-	Root?: {
+	fileSizeFormatter?: /* TFileSizeFormatter */ (size: number) => string,
+	Root?: /* IOverriddenRoot */ {
 		hideHeader?: boolean,
 		hideFooter?: boolean,
 		texts?: {
@@ -241,9 +241,10 @@ This property allows the user to override the appearance and text of all compone
 			header?: React.CSSProperties,
 			footer?: React.CSSProperties
 		},
-		component?: (props: IRootComponentArgs) => React.ReactElement // Replaces default root to custom component
+		// Replaces default root to custom component
+		component?: (props: IRootComponentArgs) => React.ReactElement
 	},
-	FileItem?: {
+	FileItem?: /* IOverriddenFileItem */ {
 		titles?: {
 			menuButtonTitle?: string,
 			menuItemView?: string,
@@ -256,7 +257,11 @@ This property allows the user to override the appearance and text of all compone
                 className?: string,
                 style?: React.CSSProperties
             },
-            initial?: {
+            local?: {
+                className?: string,
+                style?: React.CSSProperties
+            },
+            localDisabled?: {
                 className?: string,
                 style?: React.CSSProperties
             },
@@ -268,7 +273,7 @@ This property allows the user to override the appearance and text of all compone
                 className?: string,
                 style?: React.CSSProperties
             },
-            editMode?: {
+            uploadedDisabled?: {
                 className?: string,
                 style?: React.CSSProperties
             },
@@ -280,13 +285,40 @@ This property allows the user to override the appearance and text of all compone
                 className?: string,
                 style?: React.CSSProperties
             },
-            disabled?: {
+            editMode?: {
                 className?: string,
                 style?: React.CSSProperties
             }
 		},
-		thumbnail?: (props: TOverriddenFileItemFuncProps) => React.ReactElement,
-		fileName?: (props: TOverriddenFileItemFuncProps) => {
+		thumbnailFieldStyles?: /* TThumbnailFieldStyles */ ({
+            fileData: ILocalFileData,
+            readOnly: boolean,
+            disabled: boolean
+        }) => ({
+            container?: React.CSSProperties,
+            type?: React.CSSProperties,
+            loading?: React.CSSProperties,
+            audio?: {
+                type: React.CSSProperties,
+                duration: React.CSSProperties,
+                buttonContainer: React.CSSProperties,
+                buttonStart: React.CSSProperties,
+                buttonStop: React.CSSProperties,
+            },
+            image?: React.CSSProperties,
+            duration?: React.CSSProperties,
+            default?: React.CSSProperties
+        }),
+		thumbnailFieldComponent?: /* TThumbnailFieldComponent */ ({
+            fileData: ILocalFileData,
+            readOnly: boolean,
+            disabled: boolean
+        }) => React.ReactElement,
+		inputFieldStyles?: /* TInputFieldStyles */ ({
+            fileData: ILocalFileData,
+            readOnly: boolean,
+            disabled: boolean
+        }) => ({
 		    readOnlyText?: {
                 className?: string,
                 style?: React.CSSProperties
@@ -296,109 +328,183 @@ This property allows the user to override the appearance and text of all compone
                 style?: React.CSSProperties
             }
 		},
-		fileSize?: (props: TOverriddenFileItemFuncProps) => {
+		inputFieldComponent?: /* TInputFieldComponent */ ({
+		    fileData: ILocalFileData;
+            readOnly: boolean;
+            disabled: boolean;
+            changeDescription: (e: React.ChangeEvent<HTMLInputElement>) => void;
+            changeDescriptionMode: () => void;
+            confirmDescriptionChanges: () => Promise<void>;
+            undoDescriptionChanges: () => void;
+            getInputFieldProps: () => /* IInputFieldProps */ {
+                id: string;
+                value: string;
+                title: string;
+                onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+                onKeyUp: (e: React.KeyboardEvent) => void;
+                onFocus: (e: React.FocusEvent) => void;
+                onBlur: (e: React.FocusEvent) => void;
+            }
+		}) => React.ReactElement,
+		sizeFieldStyle?: /* TSizeFieldStyle */ ({
+            fileData: ILocalFileData,
+            readOnly: boolean,
+            disabled: boolean
+        }) => {
             className?: string,
             style?: React.CSSProperties
 		},
-		actionMenu?: (props: TOverriddenFileItemFuncProps) => {
-            buttonProps?: {
-                title?: string,
-                className?: string,
-                style?: React.CSSProperties
-            },
-            buttonChildren?: React.ReactElement,
-            displayIcons?: boolean,
-            menuStyles?: {
-                layer?: React.CSSProperties,
-                menu?: React.CSSProperties
-            },
-            menuItemStyle?: React.CSSProperties,
-            menuItemNames?: {
-                menuItemView?: string,
-                menuItemDownload?: string,
-                menuItemRename?: string,
-                menuItemDelete?: string
-            }
-		},
-		buttons?: () => {
-		    uploadFile?: {
-                props?: {
-                    style?: React.CSSProperties,
-                    className?: string,
-                    title?: string
+		sizeFieldComponent?: /* TSizeFieldComponent */ ({
+            fileData: ILocalFileData,
+            readOnly: boolean,
+            disabled: boolean,
+            formatSize: /* TFileSizeFormatter */ (size: number) => string
+        }) => React.ReactElement,
+        controlField?: /* TControlField */ {
+            buttons?: /* TControlFieldButtons */ ({
+                fileData: ILocalFileData,
+                readOnly: boolean,
+                disabled: boolean
+            }) => {
+                uploadFile?: {
+                    props?: {
+                        style?: React.CSSProperties,
+                        className?: string,
+                        title?: string
+                    },
+                    children?: React.ReactElement
                 },
-                children?: React.ReactElement
-            },
-            removeLocalFile?: {
-                props?: {
-                    style?: React.CSSProperties,
-                    className?: string,
-                    title?: string
+                removeLocalFile?: {
+                    props?: {
+                        style?: React.CSSProperties,
+                        className?: string,
+                        title?: string
+                    },
+                    children?: React.ReactElement
                 },
-                children?: React.ReactElement
-            },
-            confirmDescription?: {
-                props?: {
-                    style?: React.CSSProperties,
-                    className?: string,
-                    title?: string
+                confirmDescription?: {
+                    props?: {
+                        style?: React.CSSProperties,
+                        className?: string,
+                        title?: string
+                    },
+                    children?: React.ReactElement
                 },
-                children?: React.ReactElement
-            },
-            undoDescription?: {
-                props?: {
-                    style?: React.CSSProperties,
-                    className?: string,
-                    title?: string
+                undoDescription?: {
+                    props?: {
+                        style?: React.CSSProperties,
+                        className?: string,
+                        title?: string
+                    },
+                    children?: React.ReactElement
                 },
-                children?: React.ReactElement
+                loadingIcon?: React.ReactElement
             },
-            stub?: React.ReactElement
-		},
-		progressBar?: (progress: number) => React.ReactElement,
-		readOnlyLabel?: () => React.ReactElement,
-		component?: (props: IFileItemComponentArgs) => ReactElement, // Replaces default file item to custom component
+            menu?: /* TControlFieldMenu */ ({
+                fileData: ILocalFileData,
+                readOnly: boolean,
+                disabled: boolean
+            }) => {
+                buttonProps?: {
+                    title?: string,
+                    className?: string,
+                    style?: React.CSSProperties
+                },
+                buttonChildren?: React.ReactElement,
+                displayIcons?: boolean,
+                menuStyles?: {
+                    layer?: React.CSSProperties,
+                    menu?: React.CSSProperties
+                },
+                menuItemStyle?: React.CSSProperties,
+                menuItemNames?: {
+                    menuItemView?: string,
+                    menuItemDownload?: string,
+                    menuItemRename?: string,
+                    menuItemDelete?: string
+                }
+            },
+            component?: /* TControlFieldComponent */ ({
+                fileData: ILocalFileData,
+                readOnly: boolean,
+                disabled: boolean
+                noKeyboard: boolean,
+                changeDescription: (e: React.ChangeEvent<HTMLInputElement>) => void,
+                changeDescriptionMode: () => void,
+                confirmDescriptionChanges: () => Promise<void>,
+                deleteFile: (fileData: ILocalFileData | IRemoteFileData) => void,
+                downloadFile: (fileData: IRemoteFileData) => void,
+                undoDescriptionChanges: () => void,
+                viewFile: (fileData: IRemoteFileData) => void,
+                uploadFile?: (fileData: ILocalFileData) => void,
+            }) => React.ReactElement
+        },
+		progressBarComponent?: /* TProgressBarComponent */ (progress: number) => React.ReactElement,
+		readOnlyIconComponent?: /* TReadOnlyIconComponent */ () => React.ReactElement,
+		// Replaces default file item to custom component
+		component?: (props: IFileItemComponentArgs) => ReactElement
 	}
 }
 ```
-All object keys are independent and optional. Using this property, the user can redefine almost any part of the `File Manager`. For more information, see examples ([Custom UI](https://github.com/Nolesh/react-file-manager/demo/CustomUI), [Overridden UI](https://github.com/Nolesh/react-file-manager/demo/OverriddenUI)).
+All object keys are independent and optional. Using this property, the user can redefine almost any part of the `File Manager`. For more information, see examples ([Custom UI](https://github.com/Nolesh/react-file-manager/demo/CustomUI), [Overridden UI](https://github.com/Nolesh/react-file-manager/demo/OverriddenUI)). 
 
 ### `getUploadParams`
 This function should return an object or promise with the parameters required to upload files:
 
 ```tsx
-(localFileData: ILocalFileData | ILocalFileData[]) => ({
-  URL: string, // URL to the server (required)
-  fileFieldName?: string, // the name of the key in the FormData to which the file is assigned. Default value: 'file'
-  fields?: object, // additional fields in the FormData
-  body?: BodyInit, // request body that can be used instead of FormData
-  headers?: object,
-  method?: string, // default value: 'POST'
-  timeout?: number, // default value: 0
-  processResponse?: (response: any) => any, // intermediate function for processing the received result
-  checkResult?: (result: any) => boolean, // if the function returns false, the file manager will throw an error
-  processError?: (error: any) => string // convert the error received from the server to a string
-})
+type TUploadParams = {
+    URL: string;
+    fileFieldName?: string;
+    fields?: { [name: string]: string | Blob };
+    body?: BodyInit;
+    headers?: { [name: string]: string };
+    method?: TMethod;
+    timeout?: number;
+    checkResult?: (result: any) => boolean;
+    processResponse?: (response: any) => any;
+    processError?: (error: any) => string;
+};
+
+getUploadParams: /* TGetUploadParams */ (
+    localFileData: ILocalFileData | ILocalFileData[]
+) => TUploadParams | Promise<TUploadParams>;
 ```
 There are some aspects to consider when using `getUploadParams`:
 - The `localFileData` argument can be either a single file data or an array of file data. It depends on the `uploadFilesInOneRequest` property, which is set to `false` by default, meaning that the `localFileData` is a single file data. On the other hand, if you use mode of uploading files in one request (`uploadFilesInOneRequest=true`), the `localFileData` will be an array of file data.
-- If the `uploadFilesInOneRequest` property is set to `true`, all local (accepted) files will be wrapped in FormData and sent in a single request. Accordingly, all necessary data, such as file descriptions, must be attached to this request and further processed on the server. You can pass the data of files as an array using an additional field in FormData or using headers as shown below:
+- When the `addFileDescription` property is set to `true`, the user has the ability to attach a description to the uploaded file. Depending on the server implementation, you can use `headers` or `fields` to send this description and other data along with the file.
+- If the `uploadFilesInOneRequest` property is set to `true`, all local (accepted) files will be wrapped in FormData and sent in a single request. Accordingly, all necessary data, such as file descriptions, must be attached to this request and further processed on the server. You can pass file data as an array using `fields` (adds an additional field to FormData) or `headers`, as shown below:
     ```tsx
-    (localFileData: ILocalFileData | ILocalFileData[]) => ({
-    ...
-    headers: {
-    	attachments: JSON.stringify(
-    		localFileData.map((fileData) => ({
-    			fileId: fileData.uid,
-    			description: encodeURIComponent(fileData.description)
-    		}))
-    	),
-    },
-    // OR
-    fields: {
-    	fileIds: JSON.stringify(localFileData.map(f => f.uid)),
-    	descriptions: JSON.stringify(localFileData.map(f => f.description))
-    },
+    const getUploadParams: TGetUploadParams = (localFileData) => ({
+        headers: {
+            attachments: JSON.stringify(
+                Array.isArray(localFileData)
+                    ?
+                    localFileData.map((fileData) => ({
+                        fileId: fileData.uid,
+                        description: encodeURIComponent(fileData.description)
+                    }))
+                    :
+                    {
+                        fileId: localFileData.uid,
+                        description: encodeURIComponent(localFileData.description)
+                    }
+            ),
+        },
+        // OR
+        fields: {
+            fileIds: JSON.stringify(
+                Array.isArray(localFileData)
+                    ? localFileData.map(f => f.uid)
+                    : localFileData.uid
+            ),
+            descriptions: JSON.stringify(
+                Array.isArray(localFileData)
+                    ? localFileData.map(f => f.description)
+                    : localFileData.description
+            )
+        },
+        ...
+    });
     ```
 - `processResponse` is an intermediate function for processing the result received from the server after uploading file(s). If the server returns `null` or data that can be correctly mapped by the `fileFieldMapping` property, `processResponse` can be omitted. Otherwise it should return one of the following:
     - proper file data created from the server response, which must be correctly mapped by the `fileFieldMapping` or contain required fields (`fileName`, `fileSize`).
@@ -406,22 +512,6 @@ There are some aspects to consider when using `getUploadParams`:
     - `null` to remove uploaded file(s) from the list.
 - `checkResult` is an optional function that checks the result received from the server to make sure the file was loaded correctly. If it is defined and returns `false`, the file manager will throw an error even if the file was successfully uploaded.
 - `processError` is a function to process an error that may be thrown by the server during a file upload. It should extract and return the text from the error for the message that will be displayed to the user in the `onError` property.
-- When the `addFileDescription` property is set to `true`, the user has the ability to attach a description to the uploaded file. Depending on the server implementation, you can use `headers` or `fields` to send this description and other data along with the file:
-    ```tsx
-    (localFileData: ILocalFileData | ILocalFileData[]) => ({
-    ...
-    headers: {
-        attachment: JSON.stringify({
-            fileId: localFileData.uid,
-            description: encodeURIComponent(localFileData.description)
-        }),
-    },
-    // OR
-    fields: {
-        fileId: localFileData.uid,
-        description: localFileData.description
-    },
-    ```
 - In some situations, you may need to use the `body` property instead of `FormData`. For example, uploading a file to S3 using PUT. Basically, if you use PUT, you can't wrap your file in a `FormData` instance. In this case, `body` must be set to file:
     ```tsx
     body: localFileData.file,
@@ -429,33 +519,31 @@ There are some aspects to consider when using `getUploadParams`:
     ```
 - It is also possible to pass a promise to the `getUploadParams` function if you want to perform preliminary actions, such as asynchronously obtaining an access token:
     ```tsx
-    getUploadParams={async (localFileData) => {                            
+    const getUploadParams: TGetUploadParams = async (localFileData) => {                            
         return {
             URL: '/api/uploadFile',
             headers: {
                 Authorization: await getAccessToken()
             }
         }
-    }}   
+    }
     ```
 
 ### `fetchRemoteFiles`
-This property is a function for getting uploaded (remote) files from the server. By default it returns `Promise.resolve([])`.
+This property is a function for getting uploaded (remote) files from the server when the `File Manager` component is mounted. By default it returns `Promise.resolve([])`. This property is also used by the `ref`-accessible `fetchRemoteFiles` function if it is called without parameter (see [list of props & methods available by `ref`](#list-of-props-and-methods-available-by-ref)).
 Basic example:
 ```tsx
-fetchRemoteFiles={
-    () => (
-        fetch(`/api/fetchFiles`)
-        .then(res => res.json())
-        .catch(e => Promise.resolve([]))
-    )
-}
+const fetchRemoteFiles = () => (
+    fetch(`/api/fetchFiles`)
+    .then(res => res.json())
+    .catch(e => Promise.resolve([]))
+)
 ```
 
 ### `fileFieldMapping`
 This function maps the server response to the fields of the component file item. If this property is NOT defined and the server response does NOT contain required fields such as `fileName` and `fileSize`, the component will throw a specific error. It can be omitted if the field mapping is implemented in the `fetchRemoteFiles` and `processResponse`. In a real application, the server should send a response with the same structure when fetching and after uploading files. So you can use this property to map the server response in both cases instead of doing this individually in the `fetchRemoteFiles` and `processResponse`. It can also be used to extend file data with additional fields.
 ```tsx
-fileFieldMapping={(data) => ({
+const fileFieldMapping = (data: any) => ({
     uid: data.file_id, // optional
     fileName: data.file_name, // required!
     fileSize: data.file_size, // required!
@@ -467,7 +555,7 @@ fileFieldMapping={(data) => ({
     readOnly: data.read_only, // optional
     disabled: !data.enabled, // optional
     myCustomField: data.my_custom_field, // you can add extra fields to the file data
-})}
+})
 ```
 **IMPORTANT**:
 - `fileName` and `fileSize` fields are `mandatory`.
@@ -486,14 +574,14 @@ fileFieldMapping={(data) => ({
 This property should provide file browsing implementation. It must return a promise that resolves with a `blob`, or an empty promise in the case of a custom implementation.
 Example of requesting a `blob` from the server and handling errors if they exist:
 ```tsx
-viewFile={(fileData) => (
+const viewFile: IFileManagerProps['viewFile'] = (fileData) => (
     fetch(`/api/file/${fileData.fileName}`)
     .then((resp) => resp.blob())
-)}
+)
 ```
 Custom implementation example:
 ```tsx
-viewFile={(fileData) => (
+const viewFile: IFileManagerProps['viewFile'] = (fileData) => {
     if(!fileData?.previewData?.src) return Promise.reject('Something went wrong!');
 
     var image = new Image();
@@ -502,21 +590,21 @@ viewFile={(fileData) => (
     w.document.write(image.outerHTML);
 
     return Promise.resolve();
-)}
+}
 ```
 
 ### `downloadFile`
 This property should provide file downloading implementation. It must return a promise that resolves with a `blob` or an object that contains `blob` and `fileName`, or an empty promise in the case of a custom implementation.
 Example of requesting a `blob` from the server and handling errors if they exist:
 ```tsx
-downloadFile={(fileData) => (
+const downloadFile: IFileManagerProps['downloadFile'] = (fileData) => (
     fetch(`/api/file/${fileData.fileName}`)
     .then((resp) => resp.blob())
-)}
+)
 ```
 Custom implementation example:
 ```tsx
-downloadFile={async (fileData) => {
+const downloadFile: IFileManagerProps['downloadFile'] = async (fileData) => {
     if(!fileData?.previewData?.src) return Promise.reject('Something went wrong!');
 
     // convert base64 to blob
@@ -525,13 +613,13 @@ downloadFile={async (fileData) => {
 
     // save the file under a new name
     return Promise.resolve({blob, fileName});
-}}
+}
 ```
 
 ### `deleteFile`
 This property should provide an implementation for deleting files. It is required to return a resolved promise to confirm file deletion. To cancel the deletion of a file, the user need to return an empty promise rejection:
 ```tsx
-deleteFile={(fileData) => {
+const deleteFile: IFileManagerProps['deleteFile'] = (fileData) => {
     return new Promise((resolve, reject) => {
         // to give the menu time to disappear, we put the 'window.confirm' inside 'setTimeout'
         setTimeout(() => {
@@ -549,15 +637,15 @@ deleteFile={(fileData) => {
             else reject(); // cancel the deletion of the file if the user clicks the "Cancel" button
         }, 10);
     });
-}}
+}
 ```
 
 ### `setFileDescription`
 This property should provide an implementation for setting the file description. Do not confuse this property with the `addFileDescription`. The `setFileDescription` sends a request to the server to set a description for an already uploaded file, whereas `addFileDescription` makes the ability to attach a description to a file at upload time.
 Basic example:
 ```tsx
-setFileDescription={(fileData) => {
-    return fetch(`/api/file/${fileData.uid}`, {
+const setFileDescription: IFileManagerProps['setFileDescription'] = (fileData) => (
+    fetch(`/api/file/${fileData.uid}`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -567,20 +655,20 @@ setFileDescription={(fileData) => {
     .then((response) => (
         response.ok ? response.text() : Promise.reject(response.statusText)
     ))
-}}
+)
 ```
 Note that this function returns some text from the server. This text will be set as the file description in the component.
 
 ### `sortFiles`
 This property should provide an implementation for sorting files. The following example sorts files by their types (local files come first) and size:
 ```tsx
-sortFiles={(a, b) => {
+const sortFiles: TSortFunc = (a, b) => {
     // sort by file type (local or remote)
     const fileTypeResult = a.isLocalFile === b.isLocalFile ? 0 : a.isLocalFile ? -1 : 1;
     // sort by file size
     const fileSizeResult = a.fileData.fileSize - b.fileData.fileSize;
     return fileTypeResult || fileSizeResult;
-}}
+}
 ```
 Note that this property overrides the default sort function implemented in the root component.
 
@@ -592,7 +680,7 @@ The following example adds an implementation for files of type `PDF`:
 // Feel free to use any other library for this purpose.
 const PDFJS = require('pdfjs-dist/webpack');
 ...
-filePreview={(file) => {
+const filePreview: IFileManagerProps['filePreview'] = (file) => {
     if (file.type === 'application/pdf') {
         const promise = new Promise<string>((resolve) => {
             const objectUrl = URL.createObjectURL(file);
@@ -630,13 +718,14 @@ filePreview={(file) => {
         return result;
     }
 
-    // Return a promise that resolves with a 'null' or 'undefined' to use the default implementation for the rest file types
+    // Return a promise that resolves with a 'null' or 'undefined' 
+    // to use the default implementation for the rest file types.
     return Promise.resolve();
-}}
+}
 ```
 You can also override the default implementation for `image`, `audio`, and `video` file types:
 ```tsx
-filePreview={(file) => {
+const filePreview: IFileManagerProps['filePreview'] = (file) => {
     // Overrides default implementation for images
     if(file.type.startsWith('image/')){
       const imageUrl = URL.createObjectURL(file);
@@ -649,7 +738,7 @@ filePreview={(file) => {
 
     // Prevent the default implementation for the rest file types (video)
     return Promise.reject();
-}}
+}
 ```
 
 ### `fileValidator`
@@ -664,7 +753,7 @@ The error should be an object with the following structure:
 ```
 The following example checks the length of a file name:
 ```tsx
-fileValidator={(file, localFiles, remoteFiles) => {
+const fileValidator: TFileValidator = (file, localFiles, remoteFiles) => {
     const maxLength = 20; // file name is larger than 20 symbols
     if(file.name.length > maxLength) {
         return {
@@ -674,14 +763,14 @@ fileValidator={(file, localFiles, remoteFiles) => {
         };
     }
     return null;
-}}
+}
 ```
 Note that if you do NOT set the `errorId` key, it will be set to the default value `validation_error`.
 
 ### `onError`
 Callback for when an error occurs. It may receive a single error or an array of errors as an argument. In case of multiple errors, you can collect all errors and show them to the user in one message:
 ```tsx
-onError={(err) => {
+const onError: TOnError = (err) => {
     if (Array.isArray(err)) {
         const messages = err.reduce(
             (acc, val, indx) => acc.concat(`${indx + 1}. ${val.message}\n`),
@@ -689,11 +778,11 @@ onError={(err) => {
         );
         alert(messages);
     }
-}}
+}
 ```
 Since the error has fields such as `errorId` and `data`, you can ignore or override certain types of errors or extend the message with extra information:
 ```tsx
-onError={(err) => {
+const onError: TOnError = (err) => {
     const processError = e => {
         if(e.errorId === 'invalid_size_min') { // override default message
             return `file size is too small (${e.data.fileSize})`
@@ -710,7 +799,7 @@ onError={(err) => {
     else message.push(processError(err));
 
     if(message.length) alert(message.join('\n'));
-}}
+}
 ```
 Full list of internal error codes:
 |Code|Description|
@@ -737,18 +826,25 @@ Full list of internal error codes:
 You can use the `ref` exposed by the `ReactFileManager` component to perform some actions programmatically, such as opening a file dialog.
 ```jsx
 import React, {useRef} from 'react';
-import FileManager from '@nolesh/react-file-manager';
+import FileManager, { IFileManagerRef } from '@nolesh/react-file-manager';
 // make sure you include the stylesheet otherwise the file manager will not be styled
 import '@nolesh/react-file-manager/dist/styles.css';
 
+const uploadParams: TGetUploadParams = (localFileData) => ({
+    URL: `https://httpbin.org/post`,
+    // If the server returns anything other than null,
+    // we should return it to remove uploaded file from the list.
+    processResponse: () => null,
+});
+
 const FileUploader = () => {
 
-    const fileManagerRef = useRef();
+    const fileManagerRef = useRef<IFileManagerRef>(null);
 
     const openDialog = () => {
       // Note that the ref is set async, so it might be null at some point
       if (fileManagerRef.current) {
-        fileManagerRef.current.openFileDialog()
+        fileManagerRef.current.openFileDialog();
       }
     };
 
@@ -756,21 +852,16 @@ const FileUploader = () => {
         <div style={{ textAlign:'center' }}>
             <FileManager
                 ref={fileManagerRef}
-                getUploadParams={(files) => ({
-                    URL: `https://httpbin.org/post`,
-                    // If the server returns anything other than null,
-                    // we should return it to remove uploaded file from the list.
-                    processResponse: () => null,
-                })}
+                getUploadParams={uploadParams}
                 accept='image/*'
             />
             <br/>
-            <button onClick={openDialog}>Add File(s)s</button>
+            <button onClick={openDialog}>Add File(s)</button>
         </div>
     )
 }
 ```
-List of props and methods available by `ref`:
+#### List of props and methods available by `ref`
 |Name|Type|Description|
 |---|---|---|
 |openFileDialog|`() => void`|Allow the user to open a file dialog programmatically.|
@@ -779,7 +870,7 @@ List of props and methods available by `ref`:
 |update|`() => void`|Force update the component.|
 |upload|`() => Promise<any>`|Initiate uploading of all local files.|
 |cancelUpload|`() => void`|Cancel uploading of all files.|
-|reloadRemoteFiles|`() => Promise<IRemoteFileData[]>`|Initiate fetching of remote files. Calls the `fetchRemoteFiles` function.|
+|fetchRemoteFiles|`(request?: () => Promise<any>) => Promise<IRemoteFileData[]>`|Initiate fetching of remote files. If it is called without parameter, it uses the function declared in the [fetchRemoteFiles](#fetchRemoteFiles) property.|
 |remoteFiles|`IRemoteFileData[]`|A list of remote files displayed in the component.|
 |localFiles|`ILocalFileData[]`|A list of local (accepted) files displayed in the component.|
 
