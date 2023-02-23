@@ -84,6 +84,7 @@ const processResponseSimple = jest.fn((response) => {
     return response;
 });
 
+let uploadURL: string = null;
 let fetchURL: string = null;
 
 const request = (
@@ -185,6 +186,7 @@ const mockSubmitFormData = (
 ) => {
     const spy = jest.spyOn(utils, 'submitFormData');
     spy.mockImplementation((url, formData, opts) => {
+        uploadURL = url;
         return {
             // promise: Promise.resolve(''),
             promise,
@@ -218,6 +220,7 @@ const mockUploadFunc = (
 
     const spy = jest.spyOn(utils, 'submitFormData');
     spy.mockImplementation((url, formData, opts) => {
+        uploadURL = url;
         progress.push(opts.onProgress);
         return {
             promise,
@@ -2607,14 +2610,32 @@ describe('FileManager basic tests', () => {
         expect(within(getByTestId('label')).queryByText('dragNdrop')).not.toBeNull();
     });
 
-    test('should disable file input if getUploadParams is not defined', async () => {
+    // test('should disable file input if getUploadParams is not defined', async () => {
+    //     mockFetch(true, 200, []);
+
+    //     const { getByRole, findByText } = render(<Manager getUploadParams={undefined} />);
+
+    //     await findByText('dragNdrop');
+
+    //     expect(getByRole('fileinput', { hidden: true })).not.toBeEnabled();
+    // });
+    test('should hide the upload menu item if getUploadParams is not defined', async () => {
         mockFetch(true, 200, []);
 
-        const { getByRole, findByText } = render(<Manager getUploadParams={undefined} />);
+        const { getByRole, findByTestId, getAllByRole, getByTitle, findByText } = render(
+            <Manager getUploadParams={undefined} />
+        );
 
         await findByText('dragNdrop');
 
-        expect(getByRole('fileinput', { hidden: true })).not.toBeEnabled();
+        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
+        fireEvent.change(input, { target: { files: [mockFile()] } });
+
+        await findByTestId('file-container');
+
+        expect(getAllByRole('button').length).toEqual(1);
+        expect(getByTitle('remove')).toBeInTheDocument();
+        expect(getByRole('fileinput', { hidden: true })).toBeEnabled();
     });
 
     test('should render component with no files', async () => {
@@ -3379,6 +3400,72 @@ describe('FileManager exposed functions & props', () => {
 
         jest.runAllTimers();
         (input.click as jest.Mock).mockRestore();
+    });
+
+    test('should test the "upload" function with parameter', async () => {
+        const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
+        mockFetch(true, 200, []);
+
+        const { rerender, queryAllByRole, findByTestId, getByRole, findByText } = render(
+            <Manager />
+        );
+
+        await findByText('dragNdrop');
+
+        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
+        fireEvent.change(input, { target: { files: [mockFile()] } });
+
+        await findByTestId('file-container');
+
+        act(() => {
+            managerRef.current.upload();
+        });
+
+        await findByTestId('loading-icon-stub');
+
+        advanceTimersToNextTimer();
+
+        await waitFor(() => queryAllByRole('menu', { hidden: true }));
+
+        expect(uploadURL).toEqual('/api/singleFileUpload');
+
+        // with params
+
+        act(() => {
+            managerRef.current.fetchRemoteFiles();
+        });
+
+        await findByText('dragNdrop');
+
+        fireEvent.change(input, { target: { files: [mockFile('1.txt')] } });
+        await findByTestId('file-container');
+
+        act(() => {
+            managerRef.current.upload((localFileData) => {
+                expect(localFileData).toEqual(
+                    expect.objectContaining({
+                        uid: expect.any(String),
+                        state: 'local',
+                        fileName: '1.txt',
+                        file: expect.any(File),
+                    })
+                );
+
+                return {
+                    URL: '/api/customUploadURL',
+                };
+            });
+        });
+
+        await findByTestId('loading-icon-stub');
+
+        advanceTimersToNextTimer();
+
+        await waitFor(() => queryAllByRole('menu', { hidden: true }));
+
+        expect(uploadURL).toEqual('/api/customUploadURL');
+
+        mockRestore();
     });
 
     test('should test addLocalFiles (add single & multiple files)', async () => {

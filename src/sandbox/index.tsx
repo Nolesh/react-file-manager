@@ -241,40 +241,55 @@ const fileValidator: TFileValidator = (file, local, remote) => {
 const viewFile: IFileManagerProps['viewFile'] = (fileData) => {
     console.log('viewFile', fileData);
 
-    // Case 1: requests a blob from the server and handles the error if it exists
+    // Case 1: get a resource via a direct link.
 
-    return request(`file/${fileData.fileName}`).then((resp) => resp.blob());
+    // window.open(`api/file/${fileData.fileName}?view=true`, '_blank');
+    window.open(`api/file/${fileData.fileName}?view=true`);
+    return Promise.resolve();
 
-    // .then(async resp => {
-    //     if (!resp.ok) {
-    //         const errorInfo = await resp.json() as {status:number, message: string};
-    //         throw errorInfo;
-    //     }
-    //     else return await resp.blob();
-    // });
+    // Case 2: requests a blob from the server and handles the error if it exists
 
-    // Case 2: custom implementation
+    // return request(`file/${fileData.fileName}`)
+
+    //     .then((resp) => resp.blob());
+
+    //     // .then(async resp => {
+    //     //     if (!resp.ok) {
+    //     //         const errorInfo = await resp.json() as { status: number, message: string };
+    //     //         throw errorInfo;
+    //     //     }
+    //     //     else return await resp.blob();
+    //     // });
+
+    // Case 3: custom implementation
 
     // if(!fileData?.previewData?.src) return Promise.reject('Something went wrong!');
-    //
+
     // var image = new Image();
     // image.src = fileData.previewData.src;
     // var w = window.open("");
     // w.document.write(image.outerHTML);
-    //
+
     // return Promise.resolve();
 };
 
 const downloadFile: IFileManagerProps['downloadFile'] = async (fileData) => {
     console.log('downloadFile', fileData);
 
-    // Case 1: uses the default filename(description) and handles the error if it exists
+    // Case 1: get a resource via a direct link.
 
-    return request(`file/${fileData.fileName}`).then((resp) => resp.blob());
+    // window.open(`api/file/${fileData.fileName}?view=false`, '_blank');
+    // OR
+    window.open(`api/file/${fileData.fileName}`);
+    return Promise.resolve();
+
+    // Case 2: uses the default filename(description) and handles the error if it exists
+
+    // return request(`file/${fileData.fileName}`).then((resp) => resp.blob());
 
     // OR
 
-    // Case 2: uses the filename from the server and handles the error if it exists
+    // Case 3: uses the filename from the server and handles the error if it exists
 
     // return request(`file/${fileData.fileName}`)
     // .then(async resp => {
@@ -286,10 +301,10 @@ const downloadFile: IFileManagerProps['downloadFile'] = async (fileData) => {
 
     // OR
 
-    // Case 3: custom implementation
+    // Case 4: custom implementation
 
     // if(!fileData?.previewData?.src) return Promise.reject('Something went wrong!');
-    //
+
     // return fetch(fileData.previewData.src) // convert base64 to blob
     // .then(resp => resp.blob())
     // .then(resp => {
@@ -301,7 +316,7 @@ const downloadFile: IFileManagerProps['downloadFile'] = async (fileData) => {
     //     a.click();
     //     document.body.removeChild(a);
     //     setTimeout(() => window.URL.revokeObjectURL(url), 0);
-    //
+
     //     return Promise.resolve();
     // });
 
@@ -309,7 +324,7 @@ const downloadFile: IFileManagerProps['downloadFile'] = async (fileData) => {
 
     // const blob = await fetch(fileData.previewData.src).then(resp => resp.blob());
     // const fileName = 'custom_'+fileData.fileName;
-    //
+
     // // save the file under a new name
     // return Promise.resolve({blob, fileName});
 };
@@ -515,13 +530,19 @@ export const Manager: FC = (): ReactElement => {
                         <Button
                             variant="contained"
                             style={{ margin: 10, width: 160 }}
-                            onClick={() =>
-                                ref.current.upload().then((result) => {
-                                    if (result)
-                                        console.log('The file upload process is completed', result);
-                                    // ref.current.reloadRemoteFiles().then(() => console.log('Files have been reloaded'))
-                                    // .catch(err => console.error('An error occurred during reloading files', err))
-                                })
+                            onClick={
+                                () =>
+                                    ref.current.upload(uploadFileParams).then((result) => {
+                                        if (result)
+                                            console.log(
+                                                'The file upload process is completed',
+                                                result
+                                            );
+                                    })
+                                // ref.current.upload().then((result) => {
+                                //     if (result)
+                                //         console.log('The file upload process is completed', result);
+                                // })
                             }
                             disabled={isLoading}
                         >

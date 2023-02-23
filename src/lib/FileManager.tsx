@@ -97,7 +97,7 @@ export interface IFileManagerRef {
     addLocalFiles: (files: FileList | File | File[]) => void;
     removeAllLocalFiles: () => void;
     update: () => void;
-    upload: () => Promise<any>;
+    upload: (getUploadParams?: TGetUploadParams) => Promise<any>;
     cancelUpload: () => void;
     fetchRemoteFiles: (request?: TFetchRemoteFiles) => Promise<IRemoteFileData[]>;
     remoteFiles: IRemoteFileData[];
@@ -846,8 +846,14 @@ const FileManager = forwardRef(
         };
 
         const obtainUploadParams = useCallback(
-            async (fileData: ILocalFileData | ILocalFileData[]) => {
+            async (
+                fileData: ILocalFileData | ILocalFileData[],
+                getUploadParamsExt?: TGetUploadParams
+            ) => {
                 const uploadParams =
+                    (!!getUploadParamsExt &&
+                        typeof getUploadParamsExt === 'function' &&
+                        (await getUploadParamsExt(fileData))) ||
                     (!!getUploadParams &&
                         typeof getUploadParams === 'function' &&
                         (await getUploadParams(fileData))) ||
@@ -871,7 +877,10 @@ const FileManager = forwardRef(
             [setIsUploading, obtainUploadParams, createSingleFileUploadPromise]
         );
 
-        const uploadFilesSeparately = async (files: ILocalFileData[]) => {
+        const uploadFilesSeparately = async (
+            files: ILocalFileData[],
+            getUploadParams?: TGetUploadParams
+        ) => {
             if (!files.length) return Promise.resolve();
 
             setIsUploading(true);
@@ -882,7 +891,7 @@ const FileManager = forwardRef(
             for (const fileData of files) {
                 if (!['local', 'uploadError'].includes(fileData.state)) continue;
                 // Getting upload parameters for each file
-                const uploadParams = await obtainUploadParams(fileData);
+                const uploadParams = await obtainUploadParams(fileData, getUploadParams);
                 // Creating an upload promise for each file
                 const promise = createSingleFileUploadPromise(fileData, uploadParams, false, files);
                 uploadPromises.push(promise);
@@ -914,7 +923,10 @@ const FileManager = forwardRef(
             return Promise.resolve(result);
         };
 
-        const uploadFilesInOneRequest = async (files: ILocalFileData[]) => {
+        const uploadFilesInOneRequest = async (
+            files: ILocalFileData[],
+            getUploadParams?: TGetUploadParams
+        ) => {
             if (!files.length || isUploading) return Promise.resolve();
 
             setIsUploading(true);
@@ -937,7 +949,7 @@ const FileManager = forwardRef(
                 return Promise.resolve({ status: 'rejected', reason });
             };
 
-            const uploadParams = await obtainUploadParams(files);
+            const uploadParams = await obtainUploadParams(files, getUploadParams);
             if (!uploadParams) {
                 setIsUploading(false);
                 return processUploadError('upload_error', errorTxtWrongUploadParams);
@@ -1031,14 +1043,14 @@ const FileManager = forwardRef(
                 });
         };
 
-        const upload = () => {
+        const upload = (getUploadParams?: TGetUploadParams) => {
             if (readOnly || disabled) return Promise.resolve();
-            return immediateUpload(localFiles);
+            return immediateUpload(localFiles, getUploadParams);
         };
 
-        const immediateUpload = (files: ILocalFileData[]) => {
-            if (uploadInOneRequest) return uploadFilesInOneRequest(files);
-            else return uploadFilesSeparately(files);
+        const immediateUpload = (files: ILocalFileData[], getUploadParams?: TGetUploadParams) => {
+            if (uploadInOneRequest) return uploadFilesInOneRequest(files, getUploadParams);
+            else return uploadFilesSeparately(files, getUploadParams);
         };
 
         const cancelUpload = () =>
@@ -1226,7 +1238,7 @@ const FileManager = forwardRef(
                     fileData,
                     uploadFile:
                         // (!uploadInOneRequest && ((fileData) => uploadSingleFile(fileData))) || null,
-                        (!uploadInOneRequest && uploadSingleFile) || null,
+                        (!uploadInOneRequest && !!getUploadParams && uploadSingleFile) || null,
                     deleteFile: (fileData.state !== 'uploading' && deleteLocalFile) || null,
                     updateFileData: (addFileDescription && updateLocalFileData) || null,
                     showProgress:
@@ -1561,7 +1573,7 @@ const FileManager = forwardRef(
                     style={{ display: 'none' }}
                     onChange={onChange}
                     multiple={multiple}
-                    disabled={!!!getUploadParams}
+                    // disabled={!!!getUploadParams}
                     autoComplete="off"
                     tabIndex={-1}
                 />

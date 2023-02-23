@@ -28,7 +28,6 @@ app.use(express.static('dist'));
 app.use(bodyParser.json()); // Parses JSON-formatted text for bodies with a Content-Type of application/json.
 app.use(bodyParser.raw({ limit: '1mb' })); // Parses HTTP body in to a Buffer for specified custom Content-Types, although the default accepted Content-Type is application/octet-stream.
 
-
 // rename
 app.patch('/api/file/:id', (req, res) => {
     // throwError('file not found', 404)
@@ -54,23 +53,45 @@ app.delete('/api/file/:id', (req, res) => {
 
 // view / download
 app.get('/api/file/:filename', (req, res, next) => {
-    let filename = req.params.filename;
+    const { filename } = req.params;
+    const { view } = req.query;
 
     const path = `${dir_files}/${filename}`;
     if (fs.existsSync(path)) {
         console.log(`Find the file by name (${filename}) and return it as a blob`);
         const newFileName = `${new Date().toLocaleDateString().split('/').join('-')}_${filename}`;
-        // res.setHeader('filename', newFileName);
-        res.download(path, newFileName);
+        if (view === 'true') {
+            // var mimetype = mime.lookup(filename);
+            // const file = fs.readFileSync(path);
+            // res
+            //     .setHeader("content-disposition", `inline; filename="${newFileName}"`)
+            //     .setHeader("content-type", mimetype)
+            //     .end(file);
 
-        // OR
+            // OR
 
-        // var mimetype = mime.lookup(filename);
-        // res.setHeader('Content-disposition', 'attachment; filename=' + newFileName);
-        // res.setHeader('Content-type', mimetype);
-        //
-        // const file = fs.readFileSync(path);
-        // res.send(file);
+            res
+                // This header is optional, but if you want to set your own filename when "save as", you must use it.
+                // Otherwise, the browser will use the name obtained from the URL
+                .setHeader('content-disposition', `inline; filename="${newFileName}"`)
+                .sendFile(`${filename}`, {
+                    root: `${dir_files}`,
+                });
+        } else {
+            // We can set the "filename" header just for a convenient way to get the filename on the client side.
+            // Otherwise, we need to parse the "content-disposition" header.
+            // res.setHeader('filename', newFileName)
+            res.download(path, newFileName);
+
+            // OR
+
+            // var mimetype = mime.lookup(filename);
+            // res.setHeader('content-disposition', 'attachment; filename=' + newFileName);
+            // res.setHeader('content-type', mimetype);
+
+            // const file = fs.readFileSync(path);
+            // res.send(file);
+        }
     } else {
         console.log(`file (${filename}) not found`);
         throwError(`file (${filename}) not found`, 404);
@@ -115,7 +136,6 @@ app.get('/api/fetchFiles', (req, res) => {
 });
 
 app.post('/api/singleFileUpload', (req, res, next) => {
-
     const attachment = JSON.parse(
         req.headers['attachment'] || `{"fileId": "id-${new Date().getTime()}"}`
     );
