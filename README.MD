@@ -469,6 +469,7 @@ getUploadParams: /* TGetUploadParams */ (
     localFileData: ILocalFileData | ILocalFileData[]
 ) => TUploadParams | Promise<TUploadParams>;
 ```
+This property is used by the `ref`-accessible `upload` function if it is called without parameter (see [list of props & methods available by `ref`](#list-of-props-and-methods-available-by-ref)). 
 There are some aspects to consider when using `getUploadParams`:
 - The `localFileData` argument can be either a single file data or an array of file data. It depends on the `uploadFilesInOneRequest` property, which is set to `false` by default, meaning that the `localFileData` is a single file data. On the other hand, if you use mode of uploading files in one request (`uploadFilesInOneRequest=true`), the `localFileData` will be an array of file data.
 - When the `addFileDescription` property is set to `true`, the user has the ability to attach a description to the uploaded file. Depending on the server implementation, you can use `headers` or `fields` to send this description and other data along with the file.
@@ -868,7 +869,7 @@ const FileUploader = () => {
 |addLocalFiles|`(files: File \| File[]) => void`|Add local files to the component. Can be useful when adding files from the clipboard.|
 |removeAllLocalFiles|`() => void`|Remove all local files from the component.|
 |update|`() => void`|Force update the component.|
-|upload|`() => Promise<any>`|Initiate uploading of all local files.|
+|upload|`(getUploadParams?: TGetUploadParams) => Promise<any>`|Initiate uploading of all local files. If it is called without parameter, it uses the function declared in the [getUploadParams](#getUploadParams) property.|
 |cancelUpload|`() => void`|Cancel uploading of all files.|
 |fetchRemoteFiles|`(request?: () => Promise<any>) => Promise<IRemoteFileData[]>`|Initiate fetching of remote files. If it is called without parameter, it uses the function declared in the [fetchRemoteFiles](#fetchRemoteFiles) property.|
 |remoteFiles|`IRemoteFileData[]`|A list of remote files displayed in the component.|
