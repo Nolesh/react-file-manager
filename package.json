@@ -29,6 +29,7 @@
     "types": "dist/index.d.ts",
     "files": [
         "dist/{F,R,i}*.{js,ts,map}",
+        "dist/Utils/file-preview.d.ts",
         "dist/Utils/errors.d.ts",
         "dist/Utils/types.d.ts",
         "dist/styles.css",
