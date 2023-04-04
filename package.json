@@ -1,6 +1,6 @@
 {
     "name": "@nolesh/react-file-manager",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "description": "Simple HTML5 file manager with drag-drop zone to access, edit, delete, upload, download and sort files",
     "author": "Nikolai Oleshko <nik.01eshko@gmail.com>",
     "repository": {

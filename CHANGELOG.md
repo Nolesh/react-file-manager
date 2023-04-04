@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.1.1](https://github.com/Nolesh/react-file-manager/compare/v2.0.0...v2.1.1) (2023-04-04)
+
+
+### Bug Fixes
+
+* add missing file-preview.d.ts ([2250d71](https://github.com/Nolesh/react-file-manager/commit/2250d71cae7e60a8bab3608e8134ad96c256d747))
+
 ## [2.1.0](https://github.com/Nolesh/react-file-manager/compare/v1.1.1...v2.1.0) (2023-02-23)
 
 ### Features
