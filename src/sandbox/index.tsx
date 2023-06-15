@@ -494,7 +494,7 @@ export const Manager: FC = (): ReactElement => {
                         readOnly={readOnlyMode}
                         disabled={disabled}
                         // preventDropOnDocument={false}
-                        // ignoreFileDuplicates='none'
+                        //checkFileDuplicates='none'
                         // multiple={false}
                         // autoUpload
                         // noClick

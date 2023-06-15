@@ -151,7 +151,7 @@ export interface IFileManagerProps {
     onUnmountComponent?: (root: HTMLDivElement, fileInput: HTMLInputElement) => void;
     addFileDescription?: boolean;
     uploadFilesInOneRequest?: boolean;
-    ignoreFileDuplicates?: 'none' | 'local' | 'remote' | 'all';
+    checkFileDuplicates?: 'none' | 'local' | 'remote' | 'all';
     maxFileCount?: number;
     maxFileSize?: number;
     minFileSize?: number;
@@ -285,7 +285,7 @@ const FileManager = forwardRef(
             onUnmountComponent,
             addFileDescription,
             uploadFilesInOneRequest: uploadInOneRequest,
-            ignoreFileDuplicates = 'none', // excludeFileDuplicates
+            checkFileDuplicates = 'all',
             maxFileCount,
             maxFileSize,
             minFileSize,
@@ -1420,7 +1420,7 @@ const FileManager = forwardRef(
                 }
 
                 // checks local files for duplicates
-                if (['none', 'local'].includes(ignoreFileDuplicates)) {
+                if (['all', 'local'].includes(checkFileDuplicates)) {
                     localFiles.forEach((item) => {
                         if (
                             item.file.name === file.name &&
@@ -1442,7 +1442,7 @@ const FileManager = forwardRef(
                 }
 
                 // checks uploaded files for duplicates
-                if (['none', 'remote'].includes(ignoreFileDuplicates)) {
+                if (['all', 'remote'].includes(checkFileDuplicates)) {
                     remoteFiles.forEach((item) => {
                         if (item.fileName === file.name && item.fileSize === file.size) {
                             errors.push({
@@ -1607,7 +1607,7 @@ FileManager.defaultProps = {
     onError: null,
     addFileDescription: false,
     uploadFilesInOneRequest: false,
-    ignoreFileDuplicates: 'none',
+    checkFileDuplicates: 'all',
     maxFileCount: null,
     maxFileSize: null,
     minFileSize: 0,
@@ -1645,7 +1645,7 @@ FileManager.propTypes = {
     onError: PropTypes.func,
     addFileDescription: PropTypes.bool,
     uploadFilesInOneRequest: PropTypes.bool,
-    ignoreFileDuplicates: PropTypes.oneOf(['none', 'local', 'remote', 'all']),
+    checkFileDuplicates: PropTypes.oneOf(['none', 'local', 'remote', 'all']),
     maxFileCount: PropTypes.number,
     maxFileSize: PropTypes.number,
     minFileSize: PropTypes.number,

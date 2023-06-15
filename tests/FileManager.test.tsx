@@ -695,7 +695,7 @@ describe('FileManager preview', () => {
         expect(queryAllByRole('img')[0]).toHaveAttribute('src', 'image-src');
 
         // should prevent the default implementation
-        rerender(<Manager filePreview={() => Promise.reject()} ignoreFileDuplicates="remote" />);
+        rerender(<Manager filePreview={() => Promise.reject()} checkFileDuplicates="remote" />);
 
         fireEvent.change(input, { target: { files: [file] } });
 
@@ -707,7 +707,7 @@ describe('FileManager preview', () => {
         rerender(
             <Manager
                 filePreview={() => Promise.resolve('base64ImageData')}
-                ignoreFileDuplicates="remote"
+                checkFileDuplicates="remote"
             />
         );
 
@@ -722,7 +722,7 @@ describe('FileManager preview', () => {
         rerender(
             <Manager
                 filePreview={() => Promise.resolve({ src: 'base64ImageData' })}
-                ignoreFileDuplicates="remote"
+                checkFileDuplicates="remote"
             />
         );
 
@@ -3860,7 +3860,7 @@ describe('FileManager file validation', () => {
 
         // reject all file duplicates
         const { rerender, getByRole, getByTestId, findByTestId, queryAllByRole, findByTitle } =
-            render(<Manager ignoreFileDuplicates="none" />);
+            render(<Manager checkFileDuplicates="all" />);
 
         await findByTestId('file-container');
         const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
@@ -3884,7 +3884,7 @@ describe('FileManager file validation', () => {
         expectError();
 
         // accept local file duplicates only
-        rerender(<Manager ignoreFileDuplicates="remote" />);
+        rerender(<Manager checkFileDuplicates="remote" />);
 
         // adds a local file that is already exists in the list
         fireEvent.change(input, { target: { files: [file2] } });
@@ -3895,7 +3895,7 @@ describe('FileManager file validation', () => {
         expectError();
 
         // accept remote file duplicates only
-        rerender(<Manager ignoreFileDuplicates="local" />);
+        rerender(<Manager checkFileDuplicates="local" />);
 
         // adds a local file that is already exists in the list
         fireEvent.change(input, { target: { files: [file1] } });
@@ -3906,7 +3906,7 @@ describe('FileManager file validation', () => {
         expectError(new Array(2).fill('file_exists')); // = ["file_exists", "file_exists"]
 
         // accept all file duplicates
-        rerender(<Manager ignoreFileDuplicates="all" />);
+        rerender(<Manager checkFileDuplicates="none" />);
 
         // adds a local file that matches the remote file in the list
         fireEvent.change(input, { target: { files: [file1] } });
@@ -3989,7 +3989,7 @@ describe('FileManager file validation', () => {
         errorId = null;
 
         // multiple mode
-        rerender(<Manager ignoreFileDuplicates="all" />);
+        rerender(<Manager checkFileDuplicates="none" />);
 
         input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
         expect(input).toHaveAttribute('multiple');
@@ -4005,7 +4005,7 @@ describe('FileManager file validation', () => {
         mockFetch(true, 200, []);
 
         const { rerender, getByRole, getByTestId, findByTestId, queryAllByRole, findByText } =
-            render(<Manager maxFileCount={3} ignoreFileDuplicates="all" />);
+            render(<Manager maxFileCount={3} checkFileDuplicates="none" />);
 
         await findByText('dragNdrop');
         const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
