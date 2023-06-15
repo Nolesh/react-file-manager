@@ -26,12 +26,10 @@
         "front-end"
     ],
     "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "types": "dist/types/index.d.ts",
     "files": [
-        "dist/{F,R,i}*.{js,ts,map}",
-        "dist/Utils/file-preview.d.ts",
-        "dist/Utils/errors.d.ts",
-        "dist/Utils/types.d.ts",
+        "dist/{F,R,i}*.{js,map}",
+        "dist/types",
         "dist/styles.css",
         "LICENSE",
         "README.MD"
