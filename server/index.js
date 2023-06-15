@@ -30,7 +30,7 @@ app.use(bodyParser.raw({ limit: '1mb' })); // Parses HTTP body in to a Buffer fo
 
 // rename
 app.patch('/api/file/:id', (req, res) => {
-    // throwError('file not found', 404)
+    // throwError('Access denied', 403);
     const { description } = req.body;
     const newDescription = description;
 

@@ -381,6 +381,11 @@ const FileManager = forwardRef(
             overrides?.fileSizeFormatter,
         ]);
 
+        const isExceededMaxFileNum = useCallback(
+            () => !!maxFileCount && (remoteFiles?.length || 0) + localFiles.length >= maxFileCount,
+            [maxFileCount, remoteFiles, localFiles]
+        );
+
         useEffect(() => {
             dataRef.current.isMounted = true;
 
@@ -403,11 +408,11 @@ const FileManager = forwardRef(
         }, [isLoading, isUploading]);
 
         useEffect(() => {
+            if (!preventDropOnDocument) return () => undefined;
+
             const onDocumentDrop = (event: DragEvent) => {
                 if (
-                    !noDrag &&
-                    !readOnly &&
-                    !disabled &&
+                    !(noDrag || readOnly || disabled || isExceededMaxFileNum()) &&
                     rootRef.current &&
                     rootRef.current.contains(event.target as Node)
                 ) {
@@ -417,17 +422,14 @@ const FileManager = forwardRef(
                 event.preventDefault();
             };
 
-            if (preventDropOnDocument) {
-                document.addEventListener('dragover', onDocumentDrop, false);
-                document.addEventListener('drop', onDocumentDrop, false);
-            }
+            document.addEventListener('dragover', onDocumentDrop, false);
+            document.addEventListener('drop', onDocumentDrop, false);
+
             return () => {
-                if (preventDropOnDocument) {
-                    document.removeEventListener('dragover', onDocumentDrop);
-                    document.removeEventListener('drop', onDocumentDrop);
-                }
+                document.removeEventListener('dragover', onDocumentDrop);
+                document.removeEventListener('drop', onDocumentDrop);
             };
-        }, [rootRef, preventDropOnDocument, noDrag]);
+        }, [rootRef, preventDropOnDocument, noDrag, readOnly, disabled, isExceededMaxFileNum]);
 
         useEffect(() => {
             const { current: mountStates } = itemMountStates;
@@ -673,7 +675,7 @@ const FileManager = forwardRef(
                     method,
                     headers,
                     fileFieldName,
-                    fields = {},
+                    fields = {} as { [x: string]: any },
                     body,
                     timeout,
                     processResponse,
@@ -724,7 +726,7 @@ const FileManager = forwardRef(
                         updateFileData({
                             state: 'uploaded',
                             shouldBeRemoved: true,
-                        });
+                        } as any);
 
                         if (onFilesUploaded) {
                             if (remoteFile) {
@@ -960,7 +962,7 @@ const FileManager = forwardRef(
                 method,
                 headers,
                 fileFieldName,
-                fields = {},
+                fields = {} as { [x: string]: any },
                 body,
                 timeout,
                 processResponse,
@@ -1015,7 +1017,7 @@ const FileManager = forwardRef(
                     updateFileData({
                         state: 'uploaded',
                         shouldBeRemoved: true,
-                    });
+                    } as any);
 
                     if (onFilesUploaded) {
                         if (remoteFiles.length) {
@@ -1478,9 +1480,7 @@ const FileManager = forwardRef(
                 }
 
                 if (!hasError) {
-                    fileCounter++;
-
-                    const exceeded = !!maxFileCount && fileCounter > maxFileCount;
+                    const exceeded = !!maxFileCount && ++fileCounter > maxFileCount;
                     if (
                         (!multiple && acceptedFiles.length >= 1) ||
                         exceeded ||
@@ -1528,12 +1528,13 @@ const FileManager = forwardRef(
         const { active, reject } = dragData;
 
         const isDraggable =
-            !(disabled || readOnly || noDrag || isLoading) && !(uploadInOneRequest && isUploading);
+            !(disabled || readOnly || noDrag || isLoading || isExceededMaxFileNum()) &&
+            !(uploadInOneRequest && isUploading);
 
         const fileItems = getFileItems();
 
         const getEventProps = (): IRootEventProps => ({
-            onClick: !noClick ? openFileDialog : null,
+            onClick: !(noClick || isExceededMaxFileNum()) ? openFileDialog : null,
             onKeyDown: !noKeyboard ? onKeyDown : null,
             onDragEnter: isDraggable ? onDragEnter : null,
             onDragOver: isDraggable ? onDragOver : null,
