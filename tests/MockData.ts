@@ -28,28 +28,28 @@ export const mockCreateObjectURL = (returnedValue: string) => {
     };
 };
 
-export const mockAudio = () => {
-    class MockedAudio {
-        src: string = null;
-        duration: number = null;
-        onloadedmetadata: () => void;
-        onerror: (e: Error) => void;
+class MockedAudio {
+    src: string = null;
+    duration: number = null;
+    onloadedmetadata: () => void;
+    onerror: (e: Error) => void;
 
-        static init: (obj: MockedAudio) => void;
-        static instances: MockedAudio[] = [];
-        constructor() {
-            if (MockedAudio.init) MockedAudio.init(this);
-            MockedAudio.instances.push(this);
-        }
-
-        static mockRestore() {
-            global.Audio = initialValue;
-            MockedAudio.init = null;
-            MockedAudio.instances = [];
-        }
+    static initialValue = global.Audio;
+    static init: (obj: MockedAudio) => void;
+    static instances: MockedAudio[] = [];
+    constructor() {
+        if (MockedAudio.init) MockedAudio.init(this);
+        MockedAudio.instances.push(this);
     }
 
-    const initialValue = global.Audio;
+    static mockRestore() {
+        global.Audio = this.initialValue;
+        MockedAudio.init = null;
+        MockedAudio.instances = [];
+    }
+}
+
+export const mockAudio = () => {
     return ((global.Audio as unknown) = MockedAudio);
 };
 
