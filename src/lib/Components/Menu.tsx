@@ -1,6 +1,4 @@
 import React, { FC, ReactElement, useRef, useEffect, useLayoutEffect, useState } from 'react';
-
-import { MenuItem, IMenuItemProps } from './MenuItem';
 import { usePortal } from '../Utils/PortalHook';
 
 const getScrollbarWidth = () => window.innerWidth - document.documentElement.clientWidth;
@@ -28,16 +26,37 @@ function moveFocus(
 
 // -------------------------------------------------------------------------------------------------
 
+/**
+ * Represents the styles for a menu component.
+ */
 export interface IMenuStyles {
     layer?: React.CSSProperties;
     menu?: React.CSSProperties;
 }
 
+/**
+ * Represents the props for a menu component.
+ */
 export interface IMenuProps {
+    /**
+     * The unique identifier of the menu.
+     */
     id: string;
+    /**
+     * The element to which the menu is anchored.
+     */
     anchorEl: HTMLElement;
+    /**
+     * Specifies whether the menu is open or closed.
+     */
     open: boolean;
+    /**
+     * A function that will be called when the menu is closed.
+     */
     onClose?: (e: MouseEvent | KeyboardEvent) => void;
+    /**
+     * The styles to apply to the menu component.
+     */
     styles?: IMenuStyles;
 }
 
@@ -47,7 +66,10 @@ interface IRestoreStyleProperty {
     value: string;
 }
 
-export const Menu: FC<IMenuProps> = ({
+/**
+ * The Menu component is a customizable dropdown menu that is used to display a list of options or actions.
+ */
+const Menu: FC<IMenuProps> = ({
     children,
     id,
     anchorEl,
@@ -224,4 +246,5 @@ export const Menu: FC<IMenuProps> = ({
     );
 };
 
-export { IMenuItemProps, MenuItem };
+export { IMenuItemProps, default as MenuItem } from './MenuItem';
+export default Menu;

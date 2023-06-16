@@ -1,17 +1,25 @@
 import React, { FC, ReactElement, useRef, useEffect } from 'react';
 
+/**
+ * Props for a menu item component.
+ */
 export interface IMenuItemProps {
+    /**
+     * Event handler for the click event.
+     * @param event The click event object.
+     */
     onClick?: (event: React.MouseEvent<HTMLElement>) => void;
+    /**
+     * Specifies whether the menu item should be auto-focused.
+     */
     autoFocus?: boolean;
     [x: string]: any;
 }
 
-export const MenuItem: FC<IMenuItemProps> = ({
-    children,
-    onClick,
-    autoFocus,
-    ...rest
-}): ReactElement => {
+/**
+ * The MenuItem component represents an item within a menu.
+ */
+const MenuItem: FC<IMenuItemProps> = ({ children, onClick, autoFocus, ...rest }): ReactElement => {
     const menuItemRef = useRef(null);
 
     useEffect(() => {
@@ -32,3 +40,5 @@ export const MenuItem: FC<IMenuItemProps> = ({
         </div>
     );
 };
+
+export default MenuItem;

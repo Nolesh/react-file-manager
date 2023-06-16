@@ -1,21 +1,10 @@
-import { Menu, MenuItem, IMenuProps } from './Menu';
-import { Button } from './Button';
-import { TextField } from './TextField';
-import { AudioThumbnail, IAudioThumbnailProps } from './AudioThumbnail';
-import { ActionMenu, IMenuItem, IActionMenuProps } from './ActionMenu';
-import { ImageLazyLoader, IImageLazyLoaderProps } from './ImageLazyLoader';
-
+export { MenuItem, IMenuProps, default as Menu } from './Menu';
+export { IButtonProps, default as Button } from './Button';
+export { ITextFieldProps, default as TextField } from './TextField';
+export { IAudioThumbnailProps, default as AudioThumbnail } from './AudioThumbnail';
+export { IMenuItem, IActionMenuProps, default as ActionMenu } from './ActionMenu';
 export {
-    Menu,
-    MenuItem,
-    IMenuProps,
-    Button,
-    TextField,
-    AudioThumbnail,
-    IAudioThumbnailProps,
-    ActionMenu,
-    IMenuItem,
-    IActionMenuProps,
-    ImageLazyLoader,
+    IImageLazyLoader,
     IImageLazyLoaderProps,
-};
+    default as ImageLazyLoader,
+} from './ImageLazyLoader';

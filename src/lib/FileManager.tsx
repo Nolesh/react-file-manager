@@ -73,98 +73,400 @@ type TUploadError = {
     errorId?: TErrorCodes;
 };
 
-type TUploadParams = {
+/**
+ * Represents the upload parameters required by the TGetUploadParams function.
+ */
+export type TUploadParams = {
     URL: string;
+    /**
+     * The name of the file field in the upload request
+     */
     fileFieldName?: string;
+    /**
+     * Additional fields to be included in the upload request.
+     */
     fields?: { [name: string]: string | Blob };
+    /**
+     * The body of the upload request.
+     */
     body?: BodyInit;
+    /**
+     * The headers to be included in the upload request.
+     */
     headers?: { [name: string]: string };
     method?: TMethod;
+    /**
+     * The timeout duration for the upload request, in milliseconds.
+     * If set to a non-zero value, uploading will terminate after the specified time has passed.
+     */
     timeout?: number;
+    /**
+     * A function to check the result of the upload request and determine if it was successful.
+     */
     checkResult?: (result: any) => boolean;
+    /**
+     * A function to process the response received from the upload request.
+     */
     processResponse?: (response: any) => any;
+    /**
+     * A function to process any errors that occur during the upload request and return a string error message.
+     */
     processError?: (error: any) => string;
 };
 
+/**
+ * A function that returns the upload parameters required for file uploads.
+ */
 export type TGetUploadParams = (
     localFileData: ILocalFileData | ILocalFileData[]
 ) => TUploadParams | Promise<TUploadParams>;
 
 type TFetchRemoteFiles = () => Promise<any>;
 
+/**
+ * Represents a file manager reference that provides imperative methods for interacting with the file manager.
+ */
 export interface IFileManagerRef {
+    /**
+     * Opens a file dialog to select local files.
+     */
     openFileDialog: () => void;
+    /**
+     * Adds local files to the file manager. Can be useful when adding files from the clipboard.
+     * @param files - The files to add. Can be a FileList object, a single File object, or an array of File objects.
+     */
     addLocalFiles: (files: FileList | File | File[]) => void;
+    /**
+     * Removes all locally added files from the file manager.
+     */
     removeAllLocalFiles: () => void;
+    /**
+     * Forces an update of the file manager.
+     */
     update: () => void;
+    /**
+     * Uploads local files to a remote server.
+     * @param getUploadParams - An optional function that provides the upload parameters. If not specified, the function declared in the getUploadParams property is used as the default implementation.
+     * @returns A Promise that resolves when the upload is complete.
+     */
     upload: (getUploadParams?: TGetUploadParams) => Promise<any>;
+    /**
+     * Cancels the ongoing upload process.
+     */
     cancelUpload: () => void;
+    /**
+     * Retrieves remote files from a server.
+     * @param request - If not specified, the function declared in the fetchRemoteFiles property is used as the default implementation.
+     * @returns A Promise that resolves with an array of remote file data.
+     */
     fetchRemoteFiles: (request?: TFetchRemoteFiles) => Promise<IRemoteFileData[]>;
+    /**
+     * A list of remote files displayed in the file manager.
+     */
     remoteFiles: IRemoteFileData[];
+    /**
+     * A list of local (accepted) files displayed in the file manager.
+     */
     localFiles: ILocalFileData[];
 }
 
 type TComparedData = Pick<Readonly<IFileItemProps>, 'fileData' | 'isLocalFile'>;
+/**
+ * Represents a function used for sorting files.
+ * The function takes two compared data objects and returns a number indicating the sort order.
+ * @param a The first compared data object.
+ * @param b The second compared data object.
+ * @returns A number representing the sort order.
+ */
 export type TSortFunc = (a: TComparedData, b: TComparedData) => number;
 
+/**
+ * The file validator function allows performing custom validation logic on files.
+ * @param file The file to be validated.
+ * @param localFiles An array of local file data.
+ * @param remoteFiles An array of remote file data.
+ * @returns A custom error object, an array of custom error objects, or null if the file is valid.
+ */
 export type TFileValidator<T = PartialBy<TCustomError, 'errorId'>> = (
     file: File,
     localFiles: ILocalFileData[],
     remoteFiles: IRemoteFileData[]
 ) => T | T[] | null;
 
+/**
+ * Represents the override options for customizing the behavior and appearance of the file manager.
+ */
 export type TOverrides = {
+    /**
+     * A function that generates a unique identifier (UID) for file items.
+     * If not provided, a default UID generator will be used.
+     */
     uidGenerator?: () => string;
+    /**
+     * A function that formats the file size for display.
+     * If not provided, a default function will be used.
+     */
     fileSizeFormatter?: TFileSizeFormatter;
+    /**
+     * This allows overriding the default root component with a custom implementation.
+     */
     Root?: IOverriddenRoot;
+    /**
+     * This allows overriding the default file item component with a custom implementation.
+     */
     FileItem?: IOverriddenFileItem;
 };
 
+/**
+ * Represents the properties for the file manager component.
+ */
 export interface IFileManagerProps {
+    /**
+     * Ref callback that gets a DOM reference to the root body element. Can be useful to programmatically scroll.
+     * @param root The root body element of the file manager.
+     */
     getRoot?: (root: HTMLElement) => void;
+
+    /**
+     * Function to retrieve the upload parameters such as URL, headers, etc.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#getuploadparams getUploadParams} for more information.
+     * @returns An object or promise with the parameters required to upload files
+     */
     getUploadParams?: TGetUploadParams;
+
+    /**
+     * Retrieves remote files from the server.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#fetchRemoteFiles fetchRemoteFiles} for more information.
+     * @returns A promise that resolves to an array of remote file data.
+     */
     fetchRemoteFiles?: TFetchRemoteFiles;
+
+    /**
+     * Map the file fields received from the server to the file manager's file fields. This property can be omitted if the file manager's file fields match the fields on the server.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#fileFieldMapping fileFieldMapping} for more information.
+     * @param data The data to be mapped.
+     * @returns The mapped file data.
+     */
     fileFieldMapping?: (data: any) => IFileData;
+
+    /**
+     * Remove remote file from the server.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#deleteFile deleteFile} for more information.
+     * @param fileData The data of the file to be deleted.
+     * @returns A promise that resolves once the file is deleted.
+     */
     deleteFile?: (fileData: IRemoteFileData) => Promise<void>;
+
+    /**
+     * Download remote file.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#downloadFile downloadFile} for more information.
+     * @param fileData The data of the file to be downloaded.
+     * @returns A promise that resolves to the downloaded file blob and file name.
+     */
     downloadFile?: (
         fileData: IRemoteFileData
     ) => Promise<{ blob: Blob; fileName: string } | Blob | void>;
+
+    /**
+     * View remote file.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#viewFile viewFile} for more information.
+     * @param fileData The data of the file to be viewed.
+     * @returns A promise that resolves to the file blob.
+     */
     viewFile?: (fileData: IRemoteFileData) => Promise<Blob | void>;
+
+    /**
+     * Set the description for the remote file.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#setFileDescription setFileDescription} for more information.
+     * @param fileData The file data to set the description for.
+     * @returns A promise that resolves to the file description.
+     */
     setFileDescription?: (fileData: IRemoteFileData) => Promise<string>;
+
+    /**
+     * A function that sorts local and remote files.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#sortFiles sortFiles} for more information.
+     */
     sortFiles?: TSortFunc;
+
+    /**
+     * Function to provide a custom file preview for unsupported file types or override the default implementation.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#filePreview filePreview} for more information.
+     */
     filePreview?: TFilePreview;
+
+    /**
+     * A custom function for file validation.
+     * @param files The files to be validated.
+     * @returns An array of file validation errors.
+     */
     fileValidator?: TFileValidator;
+
+    /**
+     * Callback for when files have been uploaded.
+     * @param fileData An array containing the data of uploaded files.
+     */
     onFilesUploaded?: (fileData: IRemoteFileData[]) => void;
+
+    /**
+     * Callback for when files are uploading. Fires every 100ms.
+     * @param progress The upload progress percentage.
+     * @param sentBytes The number of bytes sent.
+     * @param totalBytes The total number of bytes to be sent.
+     */
     onUploadProgress?: (progress: number, sentBytes: number, totalBytes: number) => void;
+
+    /**
+     * Callback for when files are fetching or uploading.
+     * @param isLoading Whether the file manager is currently loading.
+     * @param isUploading Whether the file manager is currently uploading files.
+     */
     onLoading?: (isLoading: boolean, isUploading: boolean) => void;
+
+    /**
+     * Callback for when files are accepted or rejected based on the accept, multiple, minFileSize and other props.
+     * @param acceptedFiles The list of accepted files.
+     * @param fileRejections The rejected files and their error messages.
+     */
     onDropFiles?: (
         acceptedFiles: File[],
         fileRejections: { file: File; errors: TInternalError[] }[]
     ) => void;
+
+    /**
+     * Callback for when any of the local files have been added or removed.
+     * @param result The resulting local file data after the change.
+     * @param changedFiles The data of files that have changed in the local file stack.
+     */
     onChangeLocalFileStack?: (result: ILocalFileData[], changedFiles: ILocalFileData[]) => void;
+
+    /**
+     * Callback for when any of the file items (local and/or remote) have been mounted or unmounted.
+     * @param changedItems The items that have changed mount states.
+     * @param mountedItems The currently mounted items.
+     * @param unmountedItems The currently unmounted items.
+     */
     onChangeItemMountStates?: (
         changedItems: IItemMountState[],
         mountedItems: IItemMountState[],
         unmountedItems: IItemMountState[]
     ) => void;
+
+    /**
+     * Callback for when an error occurs.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#onError onError} for more information.
+     */
     onError?: TOnError;
+
+    /**
+     * Callback for when component is unmounted.
+     * @param root The root element of the file manager.
+     * @param fileInput The file input element of the file manager.
+     */
     onUnmountComponent?: (root: HTMLDivElement, fileInput: HTMLInputElement) => void;
+
+    /**
+     * Enables the user to add a custom description to a file.
+     */
     addFileDescription?: boolean;
+
+    /**
+     * If true, multiple files will be uploaded in one request.
+     */
     uploadFilesInOneRequest?: boolean;
+
+    /**
+     * Determines how duplicate files are handled during file acceptance.
+     * - 'none': No duplicate file checking is performed.
+     * - 'local': Check for duplicates among local files only.
+     * - 'remote': Check for duplicates among remote (uploaded) files only.
+     * - 'all': Check for duplicates among both local and remote files.
+     */
     checkFileDuplicates?: 'none' | 'local' | 'remote' | 'all';
+
+    /**
+     * Maximum number of files allowed for local (accepted) and remote (uploaded) files.
+     * The default value is undefined, which indicates no limitation on the number of accepted files.
+     */
     maxFileCount?: number;
+
+    /**
+     * The maximum file size in bytes.
+     */
     maxFileSize?: number;
+
+    /**
+     * The minimum file size in bytes.
+     */
     minFileSize?: number;
+
+    /**
+     * The accepted file types based on MIME type.
+     * This prop must be a valid {@link http://www.iana.org/assignments/media-types/media-types.xhtml MIME type}
+     * according to {@link https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file input element specification} or a valid file extension.
+     */
     accept?: string;
+
+    /**
+     * If true, automatically uploads files as soon as they are accepted.
+     */
     autoUpload?: boolean;
+
+    /**
+     * If false, allow dropped items to take over the current browser window.
+     */
     preventDropOnDocument?: boolean;
+
+    /**
+     * Indicates whether the file manager is in read-only mode.
+     */
     readOnly?: boolean;
+
+    /**
+     * Indicates whether the file manager is disabled.
+     */
     disabled?: boolean;
+
+    /**
+     * Indicates whether multiple files can be selected.
+     */
     multiple?: boolean;
+
+    /**
+     * If true, disables click to open the native file selection dialog.
+     */
     noClick?: boolean;
+
+    /**
+     * If true, disables the drag 'n' drop feature.
+     */
     noDrag?: boolean;
+
+    /**
+     * If true, disables SPACE/ENTER to open the native file selection dialog.
+     */
     noKeyboard?: boolean;
+
+    /**
+     * Sets the tabindex attribute on the root component.
+     */
     tabIndex?: number;
+
+    /**
+     * Allows overriding the root and file item components.
+     *
+     * See {@link https://www.npmjs.com/package/@nolesh/react-file-manager#overrides overrides} for more information.
+     */
     overrides?: TOverrides;
 }
 
@@ -259,6 +561,9 @@ function reducer(state: IState, action: TAction): IState {
     }
 }
 
+/**
+ * File Manager Component
+ */
 const FileManager = forwardRef(
     (
         {

@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 import { act, render, fireEvent, waitFor, screen } from '@testing-library/react';
 
 import * as component from '../../src/lib/Components/AudioThumbnail';
-const { AudioThumbnail } = component;
+const { default: AudioThumbnail } = component;
 
 let spyStopAll: any = null;
 

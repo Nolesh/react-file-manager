@@ -30,12 +30,33 @@ export const utils: {
 
 // -------------------------------------------------------------------------------------------------
 
+/**
+ * Represents the props for the AudioThumbnail component.
+ */
 export interface IAudioThumbnailProps {
+    /**
+     * The source URL of the audio file.
+     */
     src: string;
+    /**
+     * The duration of the audio file in seconds.
+     */
     duration: number;
+    /**
+     * Optional type of the audio file.
+     */
     type?: string;
+    /**
+     * The reference to the root HTMLDivElement.
+     */
     root?: HTMLDivElement;
+    /**
+     * The title to display if the audio file is invalid.
+     */
     invalidAudioTitle?: string;
+    /**
+     * Optional custom styles for different elements of the audio thumbnail.
+     */
     styles?: {
         buttonContainer?: React.CSSProperties;
         buttonStart?: React.CSSProperties;
@@ -45,7 +66,10 @@ export interface IAudioThumbnailProps {
     };
 }
 
-export const AudioThumbnail = ({
+/**
+ * AudioThumbnail component renders a simple view with a play/pause button and duration.
+ */
+const AudioThumbnail = ({
     src,
     duration,
     type,
@@ -128,3 +152,5 @@ export const AudioThumbnail = ({
         </>
     );
 };
+
+export default AudioThumbnail;

@@ -4,8 +4,17 @@ import { useIntersection } from '../Utils/IntersectionObserverHook';
 import { composeEventHandlers } from '../Utils';
 import { TStyle } from '../Utils/types';
 
+/**
+ * Represents the props for an image lazy loader component.
+ */
 export interface IImageLazyLoaderProps {
+    /**
+     * The placeholder element to be shown while the image is loading.
+     */
     placeholder?: React.ReactElement;
+    /**
+     * Custom styles for the image lazy loader component.
+     */
     styles?: {
         container?: TStyle;
         image?: {
@@ -13,10 +22,19 @@ export interface IImageLazyLoaderProps {
             loaded?: TStyle;
         };
     };
+    /**
+     * Options for the IntersectionObserver used for lazy loading.
+     */
     options?: IntersectionObserverInit;
+    /**
+     * The child element which is the actual image element to be lazy loaded.
+     */
     children: React.ReactElement<HTMLImageElement>;
 }
 
+/**
+ * Represents the functional component for an image lazy loader.
+ */
 export interface IImageLazyLoader {
     (props: IImageLazyLoaderProps): React.ReactElement;
 }
@@ -42,12 +60,11 @@ const addNewPropsToElement = (element: React.ReactElement, props: Record<string,
     return modChild;
 };
 
-export const ImageLazyLoader: IImageLazyLoader = ({
-    placeholder = null,
-    styles,
-    options,
-    children,
-}) => {
+/**
+ * The ImageLazyLoader component is used to lazy load images in a web application.
+ * It renders a placeholder element while the image is loading, and once the image is in view, it replaces the placeholder with the actual image.
+ */
+const ImageLazyLoader: IImageLazyLoader = ({ placeholder = null, styles, options, children }) => {
     const [isInView, setIsInView] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const containerRef = useRef();
@@ -87,3 +104,5 @@ export const ImageLazyLoader: IImageLazyLoader = ({
         </div>
     );
 };
+
+export default ImageLazyLoader;

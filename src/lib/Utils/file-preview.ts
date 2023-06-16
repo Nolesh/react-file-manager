@@ -2,6 +2,13 @@ import { safePromise } from '.';
 import { ILocalFileData } from '../FileItemComponent';
 import { ThumbnailWorker } from './WebWorker';
 
+/**
+ * Function to generate the file preview.
+ * @param file The file for which the preview is requested.
+ * @returns @returns A promise that resolves to the file preview, which can be a string, an object with a `src` property and additional properties, or `null`.
+ * Return `null` or `undefined` to use the default implementation for the rest of the file types.
+ * Use `Promise.reject()` if you want to prevent the default implementation for all file types.
+ */
 export type TFilePreview = (
     file: File
 ) => Promise<string | { src: string; [x: string]: any } | null | void>;

@@ -9,6 +9,9 @@ export const errorTxtWrongUploadParams =
 
 //--------------------------------- TYPES --------------------------------------
 
+/**
+ * Represents the error codes used in the file manager.
+ */
 export type TErrorCodes =
     | 'unexpected_error'
     // | 'abort_on_unmount'
@@ -33,16 +36,25 @@ type TError = {
     data?: any;
 };
 
+/**
+ * Type for internal errors.
+ */
 export type TInternalError = {
     errorId: TErrorCodes;
 } & TError;
 
+/**
+ * Type for custom errors used in the file validator function.
+ */
 export type TCustomError = {
     errorId: string;
 } & TError;
 
 export type TThrowError = (errorId: TErrorCodes, message: string, data?: any) => void;
 
+/**
+ * Callback function for handling errors.
+ */
 export type TOnError = <T extends TInternalError | TCustomError>(args: T | T[]) => void;
 
 //  --------------------------------------------------------------------------------

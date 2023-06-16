@@ -131,36 +131,117 @@ class SortFileMode {
     }
 }
 
+/**
+ * Represents the props for an overridden root component of the file manager.
+ */
 export interface IOverriddenRoot {
+    /**
+     * Flag indicating whether to hide the header component.
+     */
     hideHeader?: boolean;
+    /**
+     * Flag indicating whether to hide the footer component.
+     */
     hideFooter?: boolean;
+    /**
+     * Partial text overrides for the root component.
+     */
     texts?: Partial<SameType<string, ExtractKeys<typeof defTexts>>>;
+    /**
+     * Partial class name overrides for the root component.
+     */
     classNames?: Partial<SameType<string, ExtractKeys<typeof defaultClassNames>>>;
+    /**
+     * Partial CSS style overrides for the root component.
+     */
     styles?: Partial<SameType<React.CSSProperties, ExtractKeys<typeof defaultClassNames>>>;
+    /**
+     * Custom component to be used as the root component.
+     */
     component?: TComponent<IRootComponentProps>;
 }
 
+/**
+ * Represents the event props for the root component of the file manager.
+ */
 export interface IRootEventProps {
+    /**
+     * Handles the click event.
+     */
     onClick: (() => void) | null;
+    /**
+     * Handles the key down event.
+     */
     onKeyDown: ((e: any) => void) | null;
+    /**
+     * Handles the drag enter event.
+     */
     onDragEnter: (e: React.DragEvent) => void;
+    /**
+     * Handles the drag over event.
+     */
     onDragOver: ((e: React.DragEvent) => void) | null;
+    /**
+     * Handles the drag leave event.
+     */
     onDragLeave: (e: React.DragEvent) => void;
+    /**
+     * Handles the drop event.
+     */
     onDrop: ((e: React.DragEvent<HTMLInputElement>) => void) | null;
 }
 
+/**
+ * Represents the props for the root component of the file manager.
+ */
 export interface IRootComponentProps {
+    /**
+     * Reference to the root component element.
+     */
     componentRef: React.RefObject<HTMLDivElement>;
+    /**
+     * Function that returns the event props for the root component.
+     */
     getEventProps: () => IRootEventProps;
+    /**
+     * Function to sort the files based on a provided sorting function.
+     */
     sortFiles: (f: TSortFunc) => void;
+    /**
+     * Forces an update of the root component.
+     */
     update: () => void;
+    /**
+     * Array of React elements representing the file items to be rendered.
+     */
     fileItems: ReactElement[];
+    /**
+     * Flag indicating if the file manager is currently loading.
+     */
     isLoading: boolean;
+    /**
+     * Flag indicating if the file manager is currently uploading files.
+     */
     isUploading: boolean;
+    /**
+     * Flag indicating if the file manager is currently in a drag active state.
+     */
     isDragActive: boolean;
+    /**
+     * Flag indicating if the file manager is currently in a drag reject state.
+     */
     isDragReject: boolean;
+    /**
+     * Flag indicating if the file manager is disabled.
+     */
     disabled: boolean;
+    /**
+     * Flag indicating if the file manager is in read-only mode.
+     */
     readOnly: boolean;
+    /**
+     * The tab index value for the root component.
+     */
     tabIndex: number;
 }
 
@@ -243,6 +324,9 @@ const handleSorting: TSortFunc = (a, b) => {
 
 // ------------------------------------------------------
 
+/**
+ * Represents the root component.
+ */
 export const RootComponent: IRFC<IRootComponentProps> = ({
     componentRef,
     getEventProps,
