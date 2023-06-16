@@ -173,39 +173,39 @@ const MySimpleFileManager = () => (
 |---|---|---|---|
 |accept|`string`|`'*'`|Set accepted file types. Keep in mind that mime type determination is not reliable across platforms. CSV files, for example, are reported as text/plain under macOS but as application/vnd.ms-excel under Windows. This prop must be a valid [MIME type](http://www.iana.org/assignments/media-types/media-types.xhtml) according to [input element specification](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file) or a valid file extension.|
 |multiple|`bool`|`true`|Allow drag 'n' drop (or selection from the file dialog) of multiple files.|
-|maxFileCount|`number`|`undefined`|Maximum number of local (accepted) and remote (uploaded) files. The default value is `undefined` which means there is no limitation to how many files are accepted.|
-|maxFileSize|`number`|`undefined`|Maximum file size (in bytes)|
-|minFileSize|`number`|`0`|Minimum file size (in bytes)|
+|maxFileCount|`number`|`undefined`|Maximum number of files allowed for local (accepted) and remote (uploaded) files. The default value is `undefined`, which indicates no limitation on the number of accepted files.|
+|maxFileSize|`number`|`undefined`|The maximum file size in bytes|
+|minFileSize|`number`|`0`|The minimum file size in bytes|
 |disabled|`bool`|`false`|Enable or disable the file manager.|
 |readOnly|`bool`|`false`|Set the file manager to read-only mode.|
 |noClick|`bool`|`false`|If true, disables click to open the native file selection dialog.|
-|noDrag|`bool`|`false`|If true, disables drag 'n' drop.|
+|noDrag|`bool`|`false`|If true, disables the drag 'n' drop feature.|
 |noKeyboard|`bool`|`false`|If true, disables SPACE/ENTER to open the native file selection dialog.|
 |autoUpload|`bool`|`false`|If true, automatically uploads files as soon as they are accepted.|
-|ignoreFileDuplicates|`'none'\|'local'\|'remote'\|'all'`|`'none'`|Checks local (accepted) and/or remote (uploaded) files for duplicates on acceptance and skips them (throw an error with `file_exists` code) if they exist and the appropriate mode is selected.<br>One of type: `'none', 'local', 'remote', 'all'`.|
-|preventDropOnDocument|`bool`|`false`|If false, allow dropped items to take over the current browser window.|
-|addFileDescription|`bool`|`false`|Allow the user to add custom description to file.|
+|checkFileDuplicates|`'none'\|'local'\|'remote'\|'all'`|`'all'`|Checks local (accepted) and/or remote (uploaded) files for duplicates on acceptance and skips them (throw an error with `file_exists` code) if they exist and the appropriate mode is selected.<br>One of type: `'none', 'local', 'remote', 'all'`.|
+|preventDropOnDocument|`bool`|`true`|If false, allow dropped items to take over the current browser window.|
+|addFileDescription|`bool`|`false`|Enables the user to add a custom description to a file.|
 |uploadFilesInOneRequest|`bool`|`false`|If true, multiple files will be uploaded in one request.|
 |tabIndex|`number`|`0`|Set the `tabindex` attribute on the root component.|
-|overrides|`TOverrides`|`null`|Allow to override root and file item components. See [overrides](#overrides) description for more information.|
+|overrides|`TOverrides`|`null`|Allows overriding the root and file item components. See [overrides](#overrides) for more information.|
 |getRoot|`(root: HTMLElement) => void`|`null`|Ref callback that gets a DOM reference to the root body element. Can be useful to programmatically scroll.|
-|getUploadParams|`TGetUploadParams`|`null`|Set parameters such as `URL`, `headers`, etc. needed for upload files. See [getUploadParams](#getuploadparams) description for more information.|
-|fetchRemoteFiles|`() => Promise<IFileData[]>`|`() => Promise.resolve([])`|Fetch remote files from the server. See [fetchRemoteFiles](#fetchremotefiles) description for more information.|
-|fileFieldMapping|`(data: any) => IFileData`|`null`|Map the file fields received from the server to the component file fields. This property can be omitted if the component file fields are the same as on the server. See [fileFieldMapping](#filefieldmapping) description for more information.|
-|viewFile|`(fileData: IRemoteFileData) => Promise<Blob \| void>`|`null`|View remote file. See [viewFile](#viewfile) description for more information.|
-|downloadFile|`(fileData: IRemoteFileData) => Promise<{ blob: Blob; fileName: string } \| Blob \| void>`|`null`|Download remote file. See [downloadFile](#downloadfile) description for more information.|
-|deleteFile|`(fileData: IRemoteFileData) => Promise<void>`|`null`|Remove remote file from the server. See [deleteFile](#deletefile) description for more information.|
-|setFileDescription|`(fileData: IRemoteFileData) => Promise<string>`|`null`|Set description for remote file. See [setFileDescription](#setfiledescription) description for more information.|
-|sortFiles|`TSortFunc`|`null`|Sort local and remote files. See [sortFiles](#sortfiles) description for more information.|
-|filePreview|`TFilePreview`|`() => Promise.resolve()`|Allow to add previews for unsupported file types or override the default implementation. See [filePreview](#filepreview) description for more information.|
-|fileValidator|`TFileValidator`|`null`|Custom file validation function. See [fileValidator](#filevalidator) description for more information.|
+|getUploadParams|`TGetUploadParams`|`null`|Set parameters such as `URL`, `headers`, etc. needed for upload files. See [getUploadParams](#getuploadparams) for more information.|
+|fetchRemoteFiles|`() => Promise<IFileData[]>`|`() => Promise.resolve([])`|Fetch remote files from the server. See [fetchRemoteFiles](#fetchremotefiles) for more information.|
+|fileFieldMapping|`(data: any) => IFileData`|`null`|Map the file fields received from the server to the file manager's file fields. This property can be omitted if the file manager's file fields match the fields on the server. See [fileFieldMapping](#filefieldmapping) for more information.|
+|viewFile|`(fileData: IRemoteFileData) => Promise<Blob \| void>`|`null`|View remote file. See [viewFile](#viewfile) for more information.|
+|downloadFile|`(fileData: IRemoteFileData) => Promise<{ blob: Blob; fileName: string } \| Blob \| void>`|`null`|Download remote file. See [downloadFile](#downloadfile) for more information.|
+|deleteFile|`(fileData: IRemoteFileData) => Promise<void>`|`null`|Remove remote file from the server. See [deleteFile](#deletefile) for more information.|
+|setFileDescription|`(fileData: IRemoteFileData) => Promise<string>`|`null`|Set the description for the remote file. See [setFileDescription](#setfiledescription) for more information.|
+|sortFiles|`TSortFunc`|`null`|Sort local and remote files. See [sortFiles](#sortfiles) for more information.|
+|filePreview|`TFilePreview`|`() => Promise.resolve()`|Allow to add previews for unsupported file types or override the default implementation. See [filePreview](#filepreview) for more information.|
+|fileValidator|`TFileValidator`|`null`|A custom function for file validation. See [fileValidator](#filevalidator) for more information.|
 |onFilesUploaded|`(fileData: IRemoteFileData[]) => void`|`null`|Callback for when files have been uploaded.|
 |onUploadProgress|`(progress: number, sentBytes: number, totalBytes: number) => void`|`null`|Callback for when files are uploading. Fires every 100ms.|
 |onChangeLocalFileStack|`(result: ILocalFileData[], changedFiles: ILocalFileData[]) => void`|`null`|Callback for when any of the local files have been added or removed.|
 |onChangeItemMountStates|`(changedItems: IItemMountState[], mountedItems: IItemMountState[], unmountedItems: IItemMountState[]) => void`|`null`|Callback for when any of the file items (local and/or remote) have been mounted or unmounted.|
 |onLoading|`(isLoading: boolean, isUploading: boolean) => void`|`null`|Callback for when files are fetching or uploading.|
 |onDropFiles|`(acceptedFiles: File[], fileRejections: { file: File; errors: TInternalError[] }[]) => void`|`null`|Callback for when files are accepted or rejected based on the `accept`, `multiple`, `minFileSize` and other props.|
-|onError|`TOnError`|`null`|Callback for when an error occurs. See [onError](#onerror) description for more information.|
+|onError|`TOnError`|`null`|Callback for when an error occurs. See [onError](#onerror) for more information.|
 |onUnmountComponent|`(root: HTMLDivElement, fileInput: HTMLInputElement) => void`|`null`|Callback for when component is unmounted.|
 
 ### `overrides`
@@ -818,7 +818,7 @@ Full list of internal error codes:
 |invalid_size_max|Occurs when the user tries to add a file that is larger than the value specified in the `maxFileSize` property.|
 |invalid_size_min|Occurs when the user tries to add a file that is smaller than the value specified in the `minFileSize` property.|
 |invalid_type|Occurs when the user tries to add a file whose type is NOT specified in the `accept` property.|
-|file_exists|Occurs when the user tries to add a file that already exist. The occurrence of this error depends on the `ignoreFileDuplicates` property. For example, if the user adds a file that is already uploaded and `ignoreFileDuplicates` is set to `remote`, an error occurs. If you set `ignoreFileDuplicates` to `all`, this error will be ignored.|
+|file_exists|Occurs when the user tries to add a file that already exist. The occurrence of this error depends on the `checkFileDuplicates` property. For example, if the user adds a file that is already uploaded and `checkFileDuplicates` is set to `remote`, an error occurs. If you set `checkFileDuplicates` to `none`, this error will be ignored.|
 |validation_error|This error is related to the `fileValidator` function. This function should return an error (or an array of errors), if file validation fails. The default code of this error is `validation_error`.|
 |unexpected_error|This error code is currently unused and left for possible future use.|
 
@@ -866,9 +866,9 @@ const FileUploader = () => {
 |Name|Type|Description|
 |---|---|---|
 |openFileDialog|`() => void`|Allow the user to open a file dialog programmatically.|
-|addLocalFiles|`(files: File \| File[]) => void`|Add local files to the component. Can be useful when adding files from the clipboard.|
-|removeAllLocalFiles|`() => void`|Remove all local files from the component.|
-|update|`() => void`|Force update the component.|
+|addLocalFiles|`(files: FileList \| File \| File[]) => void`|Add local files to the file manager. Can be useful when adding files from the clipboard.|
+|removeAllLocalFiles|`() => void`|Remove all local files from the file manager.|
+|update|`() => void`|Perform a forced update on the file manager.|
 |upload|`(getUploadParams?: TGetUploadParams) => Promise<any>`|Initiate uploading of all local files. If it is called without parameter, it uses the function declared in the [getUploadParams](#getUploadParams) property.|
 |cancelUpload|`() => void`|Cancel uploading of all files.|
 |fetchRemoteFiles|`(request?: () => Promise<any>) => Promise<IRemoteFileData[]>`|Initiate fetching of remote files. If it is called without parameter, it uses the function declared in the [fetchRemoteFiles](#fetchRemoteFiles) property.|
