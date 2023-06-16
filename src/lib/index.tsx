@@ -36,10 +36,19 @@ export {
 } from './FileItemComponent';
 export {
     IMenuItem,
+    MenuItem,
+    IMenuProps,
+    Menu,
+    IAudioThumbnailProps,
     AudioThumbnail,
+    IImageLazyLoaderProps,
+    IImageLazyLoader,
     ImageLazyLoader,
+    IActionMenuProps,
     ActionMenu,
+    IButtonProps,
     Button,
+    ITextFieldProps,
     TextField,
 } from './Components';
 export * as Icons from './SvgIcons';
