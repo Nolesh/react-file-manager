@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.0](https://github.com/Nolesh/react-file-manager/compare/v2.1.0...v2.2.0) (2023-06-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* "ignoreFileDuplicates" has been renamed to "checkFileDuplicates"
+
+### Features
+
+* export additional types and components ([6ecafd5](https://github.com/Nolesh/react-file-manager/commit/6ecafd53bbc244665fef69d51a29086ce6fd4dee))
+
+
+### Bug Fixes
+
+* minor bugs ([184f4ac](https://github.com/Nolesh/react-file-manager/commit/184f4acc28e7db69ee22062bc82a3ab3b282c9eb))
+* typings ([332abbb](https://github.com/Nolesh/react-file-manager/commit/332abbb0dd9a3ea382fcc900f9dcfc6af73f3978))
+
 ### [2.1.1](https://github.com/Nolesh/react-file-manager/compare/v2.0.0...v2.1.1) (2023-04-04)
 
 
