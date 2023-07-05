@@ -623,12 +623,14 @@ const FileManager = forwardRef(
                 promise: ReturnType<typeof makeQueryablePromise> | null;
             }[];
             uploadPromises: Promise<unknown>[];
+            remoteFiles: IRemoteFileData[];
         }>({
             dragTargetElement: null,
             onSortFunc: null,
             isMounted: false,
             uploadingFiles: [],
             uploadPromises: [],
+            remoteFiles: [],
         });
 
         const uploadProgressData = useRef<{
@@ -644,6 +646,8 @@ const FileManager = forwardRef(
         const [state, dispatch] = useReducer(reducer, initialState);
         const { isLoading, isUploading, forceUpdateTrigger, localFiles, remoteFiles, dragData } =
             state;
+
+        dataRef.current.remoteFiles = remoteFiles;
 
         const safeDispatch = useCallback(
             (value: TAction) => dataRef.current.isMounted && dispatch(value),
@@ -901,6 +905,15 @@ const FileManager = forwardRef(
                 files.forEach((item) => {
                     if (!uid || uid === item.uid) Object.assign(item, data);
                 });
+
+                // If we use "localFileData" as the returned value in the "processResponse" of the "getUploadParams" function and
+                // the upload process completes before generating a preview, resulting in "localFileData" missing "previewData".
+                // To prevent this issue, we need to update the "previewData" of the uploaded files.
+                dataRef.current.remoteFiles.forEach((item) => {
+                    if (uid === item.uid && !item.previewData?.src)
+                        Object.assign(item.previewData, data.previewData);
+                });
+
                 forceUpdate();
             },
             [forceUpdate, localFiles]

@@ -69,7 +69,7 @@ class ThumbnailWorker extends WebWorker {
     // };`;
 
     private static readonly script =
-        'function arrayBufferToBase64(e){let t="";const a=new Uint8Array(e),n=a.byteLength;for(let e=0;e<n;e++)t+=String.fromCharCode(a[e]);return btoa(t)}onmessage=function(e){const t=e.data,{file:a,maxImageSize:n,quality:r}=t;createImageBitmap(a).then((e=>{const t=n/Math.max(e.width,e.height),s=e.width*t,o=e.height*t,i=new OffscreenCanvas(s,o);return i.getContext("2d").drawImage(e,0,0,s,o),i.convertToBlob({type:a.type,quality:r}).then((async e=>{const t="data:${file.type};base64,"+arrayBufferToBase64(await e.arrayBuffer());postMessage(t)}))})).catch((e=>{postMessage(e.message)}))};';
+        'function arrayBufferToBase64(e){let t="";const a=new Uint8Array(e),n=a.byteLength;for(let e=0;e<n;e++)t+=String.fromCharCode(a[e]);return btoa(t)}onmessage=function(e){const t=e.data,{file:a,maxImageSize:n,quality:r}=t;createImageBitmap(a).then((e=>{const t=n/Math.max(e.width,e.height),s=e.width*t,o=e.height*t,i=new OffscreenCanvas(s,o);return i.getContext("2d").drawImage(e,0,0,s,o),i.convertToBlob({type:a.type,quality:r}).then((async e=>{const t=`data:${a.type};base64,`+arrayBufferToBase64(await e.arrayBuffer());postMessage(t)}))})).catch((e=>{postMessage(e.message)}))};';
 
     constructor(useExternalScript = false) {
         if (useExternalScript) {
