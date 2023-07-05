@@ -8,6 +8,7 @@ import React, {
     forwardRef,
     ForwardRefExoticComponent,
     RefAttributes,
+    useCallback,
 } from 'react';
 
 const PDFJS = require('pdfjs-dist/webpack');
@@ -63,12 +64,10 @@ const request = (
     });
 };
 
-const fetchRemoteFiles = () => {
-    return request('fetchFiles').then((res) => res.json());
-    // return Promise.reject()
-    // return Promise.resolve({} as any)
-    // return Promise.resolve([])
-};
+const fetchRemoteFiles = request('fetchFiles').then((res) => res.json());
+// Promise.reject()
+// Promise.resolve({} as any)
+// Promise.resolve([])
 
 // ----------------------------------------------------------------------------------------------
 // Upload multiple files in one request
@@ -419,6 +418,17 @@ export const Manager: FC = (): ReactElement => {
 
     let root: HTMLElement = null;
 
+    const [fetchFunc, setFetchFunc] = useState<boolean>();
+    const fetchRemoteFilesFunc = useCallback(() => {
+        return fetchFunc ? fetchRemoteFiles : Promise.resolve([]);
+    }, [fetchFunc]);
+
+    useEffect(() => {
+        setTimeout(() => {
+            setFetchFunc(true);
+        }, 1000);
+    }, []);
+
     return (
         <div style={{ textAlign: 'center' }}>
             <Typography variant="h5" style={{ padding: 10 }}>
@@ -433,7 +443,7 @@ export const Manager: FC = (): ReactElement => {
                     <FileManager
                         ref={ref}
                         getRoot={(el) => (root = el)} // Ref callback that gets a DOM reference to the root body element. Can be useful to programmatically scroll.
-                        fetchRemoteFiles={fetchRemoteFiles}
+                        fetchRemoteFiles={fetchRemoteFilesFunc}
                         fileFieldMapping={(data) => ({
                             // We can omit this option if the component file fields are the same as the server fields.
                             // We intentionally made them different to show how the files can be matched

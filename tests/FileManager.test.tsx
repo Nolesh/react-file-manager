@@ -461,6 +461,8 @@ describe('FileManager sorting', () => {
         // override default sorting (sort by file size)
         rerender(<Manager sortFiles={(a, b) => a.fileData.fileSize - b.fileData.fileSize} />);
 
+        await findByTestId('file-container');
+
         expect(within(queryAllByRole('fileitem')[0]).queryByTitle('NewLocal.txt')).not.toBeNull();
         expect(within(queryAllByRole('fileitem')[1]).queryByTitle('readOnly.pdf')).not.toBeNull();
         expect(within(queryAllByRole('fileitem')[2]).queryByTitle('sound.mp3')).not.toBeNull();
@@ -1409,14 +1411,16 @@ describe('FileManager uploading', () => {
 
         await findByTestId('file-container');
 
-        expect.assertions(8);
+        expect.assertions(9);
 
         expect(getByTitle('upload')).not.toHaveAttribute('disabled');
         expect(getByTitle('remove')).not.toHaveAttribute('disabled');
 
         rerender(<Manager readOnly />);
 
-        expect(getByTitle('upload')).toHaveAttribute('disabled');
+        await waitFor(() => expect(getByTitle('upload')).toHaveAttribute('disabled'));
+
+        // expect(getByTitle('upload')).toHaveAttribute('disabled');
         expect(getByTitle('remove')).toHaveAttribute('disabled');
 
         act(() => {
@@ -1432,9 +1436,14 @@ describe('FileManager uploading', () => {
                 });
         });
 
+        rerender(<Manager />);
+        await waitFor(() => expect(getByTitle('upload')).not.toHaveAttribute('disabled'));
+
         rerender(<Manager disabled />);
 
-        expect(getByTitle('upload')).toHaveAttribute('disabled');
+        await waitFor(() => expect(getByTitle('upload')).toHaveAttribute('disabled'));
+
+        // expect(getByTitle('upload')).toHaveAttribute('disabled');
         expect(getByTitle('remove')).toHaveAttribute('disabled');
 
         act(() => {
@@ -2860,7 +2869,7 @@ describe('FileManager basic tests', () => {
     test('should accept file on the FileInput change event', async () => {
         mockFetch(true, 200, []);
 
-        const { rerender, getByRole, getByTestId, findByTestId, findByText } = render(<Manager />);
+        const { getByRole, getByTestId, findByTestId, findByText } = render(<Manager />);
 
         await findByText('dragNdrop');
 
@@ -3075,17 +3084,16 @@ describe('FileManager basic tests', () => {
     test('should set component to read only mode', async () => {
         mockFetch(true, 200, simpleResponse);
 
-        const { rerender, getAllByRole, getByRole, findByTestId, queryAllByRole, queryByTestId } =
-            render(
-                <Manager
-                    viewFile={() => Promise.resolve()}
-                    downloadFile={() => Promise.resolve()}
-                    setFileDescription={() => Promise.resolve('')}
-                    deleteFile={() => Promise.resolve()}
-                    readOnly
-                    addFileDescription
-                />
-            );
+        const { getAllByRole, getByRole, findByTestId, queryAllByRole, queryByTestId } = render(
+            <Manager
+                viewFile={() => Promise.resolve()}
+                downloadFile={() => Promise.resolve()}
+                setFileDescription={() => Promise.resolve('')}
+                deleteFile={() => Promise.resolve()}
+                readOnly
+                addFileDescription
+            />
+        );
 
         await findByTestId('file-container');
         // act(() => { getAllByRole('button')[0].click(); });
@@ -3136,8 +3144,9 @@ describe('FileManager basic tests', () => {
     test('should test disabled component', async () => {
         mockFetch(true, 200, simpleResponse);
 
-        const { rerender, getAllByRole, getByRole, findByTestId, queryByTestId, queryAllByRole } =
-            render(<Manager viewFile={() => Promise.resolve()} disabled />);
+        const { getByRole, findByTestId, queryByTestId, queryAllByRole } = render(
+            <Manager viewFile={() => Promise.resolve()} disabled />
+        );
 
         await findByTestId('file-container');
 
@@ -3164,8 +3173,9 @@ describe('FileManager basic tests', () => {
     test('should test noClick & noDrag props', async () => {
         mockFetch(true, 200, simpleResponse);
 
-        const { rerender, getAllByRole, getByRole, findByTestId, queryByTestId, queryAllByRole } =
-            render(<Manager viewFile={() => Promise.resolve()} noDrag noClick />);
+        const { getByRole, findByTestId, queryByTestId, queryAllByRole } = render(
+            <Manager viewFile={() => Promise.resolve()} noDrag noClick />
+        );
 
         await findByTestId('file-container');
 
@@ -3211,7 +3221,7 @@ describe('FileManager basic tests', () => {
         mockFetch(true, 200, simpleResponse);
 
         const { rerender, getAllByRole, getByRole, findByTestId, queryByTestId, queryAllByRole } =
-            render(<Manager viewFile={() => Promise.resolve()} />);
+            render(<Manager viewFile={() => Promise.resolve()} tabIndex={1} />);
 
         await findByTestId('file-container');
 
@@ -3225,7 +3235,9 @@ describe('FileManager basic tests', () => {
         fireEvent.keyDown(root, { key: 'Enter' });
         expect(input.click).toBeCalledTimes(2);
 
-        rerender(<Manager viewFile={() => Promise.resolve()} noKeyboard />);
+        rerender(<Manager viewFile={() => Promise.resolve()} tabIndex={1} noKeyboard />);
+
+        await waitFor(() => expect(root.tabIndex).toEqual(-1));
 
         fireEvent.keyDown(root, { key: ' ' });
         expect(input.click).toBeCalledTimes(2);
@@ -3260,7 +3272,9 @@ describe('FileManager basic tests', () => {
         expect(eventListeners.length).toEqual(0);
 
         rerender(<Manager preventDropOnDocument />);
-        expect(eventListeners.length).toEqual(2);
+
+        await waitFor(() => expect(eventListeners.length).toEqual(2));
+
         expect(eventListeners[0].type).toEqual('dragover');
         expect(eventListeners[1].type).toEqual('drop');
 
@@ -3273,7 +3287,7 @@ describe('FileManager basic tests', () => {
 
         const onChangeLocalFileStack = jest.fn();
 
-        const { rerender, getByRole, getAllByRole, findByTestId, findByText } = render(
+        const { getByRole, getAllByRole, findByTestId, findByText } = render(
             <Manager onChangeLocalFileStack={onChangeLocalFileStack} />
         );
 
@@ -3334,7 +3348,8 @@ describe('FileManager basic tests', () => {
             <Manager onChangeItemMountStates={onChangeItemMountStates} sortFiles={() => -1} />
         );
 
-        expect(onChangeItemMountStates).toBeCalledTimes(2);
+        await waitFor(() => expect(onChangeItemMountStates).toBeCalledTimes(2));
+
         expect(onChangeItemMountStates).toHaveBeenCalledWith(
             [],
             [expect.any(Object), expect.any(Object)],
@@ -3387,15 +3402,18 @@ describe('FileManager exposed functions & props', () => {
 
         await findByText('dragNdrop');
 
+        const root = getByRole('root');
         const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
         input.click = jest.fn();
 
         openNCheck(1);
 
-        rerender(<Manager readOnly />);
+        rerender(<Manager tabIndex={1} readOnly />);
+        await waitFor(() => expect(root.tabIndex).toEqual(1));
         openNCheck(1);
 
-        rerender(<Manager disabled />);
+        rerender(<Manager tabIndex={1} disabled />);
+        await waitFor(() => expect(root.tabIndex).toEqual(-1));
         openNCheck(1);
 
         jest.runAllTimers();
@@ -3406,9 +3424,7 @@ describe('FileManager exposed functions & props', () => {
         const { updateProgress, advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
         mockFetch(true, 200, []);
 
-        const { rerender, queryAllByRole, findByTestId, getByRole, findByText } = render(
-            <Manager />
-        );
+        const { queryAllByRole, findByTestId, getByRole, findByText } = render(<Manager />);
 
         await findByText('dragNdrop');
 
@@ -3539,6 +3555,7 @@ describe('FileManager exposed functions & props', () => {
 
         await findByTestId('file-container');
 
+        const root = getByRole('root');
         const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
         fireEvent.change(input, { target: { files: [mockFile('1.txt'), mockFile('2.txt')] } });
         await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(4));
@@ -3550,10 +3567,12 @@ describe('FileManager exposed functions & props', () => {
         fireEvent.change(input, { target: { files: [mockFile('1.txt'), mockFile('2.txt')] } });
         await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(4));
 
-        rerender(<Manager readOnly />);
+        rerender(<Manager tabIndex={1} readOnly />);
+        await waitFor(() => expect(root.tabIndex).toEqual(1));
         removeNCheck(4);
 
-        rerender(<Manager disabled />);
+        rerender(<Manager tabIndex={1} disabled />);
+        await waitFor(() => expect(root.tabIndex).toEqual(-1));
         removeNCheck(4);
     });
 
@@ -3805,6 +3824,7 @@ describe('FileManager file validation', () => {
 
         await findByText('dragNdrop');
 
+        const root = getByRole('root');
         // check for the invalid_type error
         const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
         let file = mockFile('ping.json', 10 * 1024, 'application/json');
@@ -3816,7 +3836,8 @@ describe('FileManager file validation', () => {
         expect(errorId).toEqual('invalid_type');
 
         // check for the invalid_size_min error
-        rerender(<Manager minFileSize={12 * 1024} maxFileSize={20 * 1024} />);
+        rerender(<Manager tabIndex={1} minFileSize={12 * 1024} maxFileSize={20 * 1024} />);
+        await waitFor(() => expect(root.tabIndex).toEqual(1));
 
         fireEvent.change(input, { target: { files: [file] } });
 
@@ -3863,6 +3884,7 @@ describe('FileManager file validation', () => {
             render(<Manager checkFileDuplicates="all" />);
 
         await findByTestId('file-container');
+        const root = getByRole('root');
         const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
 
         // adds a local file that matches the remote file in the list
@@ -3884,7 +3906,8 @@ describe('FileManager file validation', () => {
         expectError();
 
         // accept local file duplicates only
-        rerender(<Manager checkFileDuplicates="remote" />);
+        rerender(<Manager tabIndex={1} checkFileDuplicates="remote" />);
+        await waitFor(() => expect(root.tabIndex).toEqual(1));
 
         // adds a local file that is already exists in the list
         fireEvent.change(input, { target: { files: [file2] } });
@@ -3895,7 +3918,8 @@ describe('FileManager file validation', () => {
         expectError();
 
         // accept remote file duplicates only
-        rerender(<Manager checkFileDuplicates="local" />);
+        rerender(<Manager tabIndex={2} checkFileDuplicates="local" />);
+        await waitFor(() => expect(root.tabIndex).toEqual(2));
 
         // adds a local file that is already exists in the list
         fireEvent.change(input, { target: { files: [file1] } });
@@ -3906,7 +3930,8 @@ describe('FileManager file validation', () => {
         expectError(new Array(2).fill('file_exists')); // = ["file_exists", "file_exists"]
 
         // accept all file duplicates
-        rerender(<Manager checkFileDuplicates="none" />);
+        rerender(<Manager tabIndex={3} checkFileDuplicates="none" />);
+        await waitFor(() => expect(root.tabIndex).toEqual(3));
 
         // adds a local file that matches the remote file in the list
         fireEvent.change(input, { target: { files: [file1] } });
@@ -3938,6 +3963,7 @@ describe('FileManager file validation', () => {
             render(<Manager fileValidator={handleFileValidation} />);
 
         await findByTestId('file-container');
+        const root = getByRole('root');
         const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
 
         // should pass
@@ -3956,6 +3982,7 @@ describe('FileManager file validation', () => {
         // should return an array of errors
         rerender(
             <Manager
+                tabIndex={1}
                 fileValidator={(file, local, remote) => {
                     return [
                         { errorId: 'custom_error', message: 'error 1' },
@@ -3964,6 +3991,7 @@ describe('FileManager file validation', () => {
                 }}
             />
         );
+        await waitFor(() => expect(root.tabIndex).toEqual(1));
 
         fireEvent.change(input, { target: { files: [file] } });
         expect(errorId).toEqual(['custom_error', 'validation_error']);
@@ -3977,6 +4005,7 @@ describe('FileManager file validation', () => {
         );
 
         await findByText('dragNdrop');
+        const root = getByRole('root');
         let input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
         expect(input).not.toHaveAttribute('multiple');
 
@@ -3989,7 +4018,8 @@ describe('FileManager file validation', () => {
         errorId = null;
 
         // multiple mode
-        rerender(<Manager checkFileDuplicates="none" />);
+        rerender(<Manager tabIndex={1} checkFileDuplicates="none" />);
+        await waitFor(() => expect(root.tabIndex).toEqual(1));
 
         input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
         expect(input).toHaveAttribute('multiple');
@@ -4004,8 +4034,9 @@ describe('FileManager file validation', () => {
     test('should check if the maximum number of files is exceeded', async () => {
         mockFetch(true, 200, []);
 
-        const { rerender, getByRole, getByTestId, findByTestId, queryAllByRole, findByText } =
-            render(<Manager maxFileCount={3} checkFileDuplicates="none" />);
+        const { getByRole, queryAllByRole, findByText } = render(
+            <Manager maxFileCount={3} checkFileDuplicates="none" />
+        );
 
         await findByText('dragNdrop');
         const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;

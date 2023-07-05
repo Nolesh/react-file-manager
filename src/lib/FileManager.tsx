@@ -694,19 +694,21 @@ const FileManager = forwardRef(
         useEffect(() => {
             dataRef.current.isMounted = true;
 
-            loadUploadedFiles().catch((err) => console.error(err));
-
             const { current: rootHtml } = rootRef;
             const { current: fileInputHtml } = fileInputRef;
             if (getRoot) getRoot(rootHtml);
 
-            // Clean up function that cancels upload files
             return () => {
                 dataRef.current.isMounted = false;
-                cancelUpload();
                 if (onUnmountComponent) onUnmountComponent(rootHtml, fileInputHtml);
             };
         }, []);
+
+        useEffect(() => {
+            loadUploadedFiles().catch((err) => console.error(err));
+            // Clean up function that cancels upload files
+            return cancelUpload;
+        }, [fetchRemoteFiles]);
 
         useEffect(() => {
             if (onLoading) onLoading(isLoading, isUploading);
