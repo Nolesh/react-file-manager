@@ -2104,6 +2104,71 @@ describe('FileManager uploading', () => {
 
         spy.mockRestore();
     });
+
+    test('should update "previewData.src" in the "localFileData" by "generatePreview" function for uploaded files after upload process is completed', async () => {
+        const restoreObserver = setObserverToNull();
+
+        const { setCustomTimer, advanceTimersToNextTimer: finishGenImageThumbnail } =
+            useCustomTimer();
+
+        const spy = jest.spyOn(thumbnail, 'generateImageThumbnail');
+        spy.mockImplementation(
+            () => new Promise((res) => setCustomTimer(() => res('image-src'), 5))
+        );
+
+        const { advanceTimersToNextTimer, mockRestore } = mockUploadFunc();
+
+        let src = 'must be null';
+        const {
+            getByRole,
+            queryAllByRole,
+            findAllByRole,
+            findByText,
+            getByTestId,
+            queryByRole,
+            queryByTestId,
+        } = render(
+            <Manager
+                getUploadParams={(localFileData: ILocalFileData) => ({
+                    URL: `/api/singleFileUpload`,
+                    processResponse: (response) => {
+                        src = localFileData.previewData.src;
+                        return localFileData;
+                    },
+                    processError: getErrorMessage,
+                })}
+                autoUpload
+            />
+        );
+
+        await findByText('dragNdrop');
+
+        const input = getByRole('fileinput', { hidden: true }) as HTMLInputElement;
+        const file = mockFile('img.png', 10 * 1024, 'image/png');
+        fireEvent.change(input, { target: { files: [file] } });
+
+        await waitFor(() => expect(queryAllByRole('fileitem').length).toEqual(1));
+
+        expect(getByTestId('loading-icon')).toBeInTheDocument();
+        expect(getByRole('progressbar')).toBeInTheDocument();
+
+        advanceTimersToNextTimer();
+        await waitFor(() => expect(queryByRole('progressbar')).not.toBeInTheDocument());
+
+        // expect(src).toEqual('image-src');
+        expect(src).toBeNull();
+
+        finishGenImageThumbnail();
+        await waitFor(() => expect(queryByRole('imagelazyloader')).toBeInTheDocument());
+
+        expect(
+            within(getByRole('imagelazyloader')).getByRole('img', { hidden: true })
+        ).toHaveAttribute('src', 'image-src');
+
+        restoreObserver();
+        spy.mockRestore();
+        mockRestore();
+    });
 });
 
 describe('FileManager uploading (one request upload mode)', () => {

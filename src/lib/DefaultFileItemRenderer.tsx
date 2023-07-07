@@ -258,7 +258,6 @@ const fileDataKeys: (keyof ILocalFileData)[] = [
     'fileName',
     'fileSize',
     'fileType',
-    'previewData',
     'readOnly',
     'state',
 ];
@@ -341,6 +340,7 @@ const DefaultFileItemRenderer = ({
         [
             overrides?.thumbnailFieldStyles,
             overrides?.thumbnailFieldComponent,
+            JSON.stringify(fileData.previewData),
             root,
             type,
             ...commonDeps,
