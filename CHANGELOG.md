@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.2.1](https://github.com/Nolesh/react-file-manager/compare/v2.2.0...v2.2.1) (2023-07-07)
+
+
+### Bug Fixes
+
+* invoke "fetchRemoteFiles" whenever the function changes ([c4f7df9](https://github.com/Nolesh/react-file-manager/commit/c4f7df9d5cc11b94cc15046716094cbb3b1b0085))
+* update "previewData" for uploaded files when using "localFileData" in "getUploadParams" ([b3bf285](https://github.com/Nolesh/react-file-manager/commit/b3bf285427231bc17ffc64ba3251ff2ce7b9242c))
+
 ## [2.2.0](https://github.com/Nolesh/react-file-manager/compare/v2.1.0...v2.2.0) (2023-06-16)
 
 
