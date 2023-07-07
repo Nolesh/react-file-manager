@@ -92,5 +92,5 @@ export const overrides: TOverrides = {
     // uidGenerator: () => `uid-${new Date().getTime()}-${Math.random()*100}`, // uncomment to override the default implementation
     // fileSizeFormatter: (size) => `${size.toLocaleString()} B`, // uncomment to override the default implementation
     Root: OverriddenRoot,
-    FileItem: OverridenFileItem,
+    // FileItem: OverridenFileItem,
 };

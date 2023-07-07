@@ -250,6 +250,68 @@ app.put('/api/multipleFileUpload', (req, res, next) => {
     res.json({ result });
 });
 
+// ---------------------------- AVATAR ------------------------------------
+
+const avatarFilename = 'avatar';
+
+const bufferToBase64 = (buffer) => 'data:image/*;base64,' + buffer.toString('base64');
+
+app.get('/api/avatar', (req, res, next) => {
+    const path = `${dir_files}/${avatarFilename}`;
+    if (fs.existsSync(path)) {
+        const buffer = fs.readFileSync(path);
+        res.json([
+            {
+                fileName: avatarFilename,
+                fileSize: buffer.length,
+                previewData: { src: bufferToBase64(buffer) },
+            },
+        ]);
+    } else {
+        throwError(`file (${avatarFilename}) not found`, 404);
+    }
+});
+
+app.post('/api/avatar', (req, res, next) => {
+    const form = formidable();
+
+    form.parse(req, async (err, fields, files) => {
+        if (err) {
+            next(err);
+            return;
+        }
+
+        try {
+            const { file } = files;
+            if (!Array.isArray(files.file)) {
+                const buf = fs.readFileSync(file.path);
+                fs.writeFileSync(`${dir_files}/${avatarFilename}`, buf);
+                fs.unlinkSync(file.path);
+
+                res.json([
+                    {
+                        fileName: avatarFilename,
+                        fileSize: buf.length,
+                        previewData: { src: bufferToBase64(buf) },
+                    },
+                ]);
+            }
+        } catch (e) {
+            next({ message: e.message });
+        }
+    });
+});
+
+app.delete('/api/avatar', (req, res, next) => {
+    const path = `${dir_files}/${avatarFilename}`;
+    if (fs.existsSync(path)) {
+        fs.unlinkSync(path);
+        res.json({ result: true });
+    } else {
+        throwError(`file (${avatarFilename}) not found`, 404);
+    }
+});
+
 // ------------------------ ERROR HANDLING --------------------------------
 
 // display error middleware

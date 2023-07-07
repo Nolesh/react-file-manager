@@ -20,6 +20,7 @@ const Scrolling = lazy(() => import(`./Scrolling/${folder}`));
 const FileValidation = lazy(() => import(`./FileValidation/${folder}`));
 const ExposedFunctions = lazy(() => import(`./ExposedFunctions/${folder}`));
 const AdvancedUploading = lazy(() => import(`./AdvancedUploading/${folder}`));
+const Avatar = lazy(() => import(`./Avatar/${folder}`));
 
 const modules = [
     {
@@ -66,6 +67,11 @@ const modules = [
         name: 'Advanced Uploading',
         src: <AdvancedUploading />,
         url: 'advanced-uploading',
+    },
+    {
+        name: 'Avatar',
+        src: <Avatar />,
+        url: 'avatar',
     },
 ];
 
