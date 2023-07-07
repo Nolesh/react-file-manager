@@ -56,3 +56,9 @@ The following example shows how exposed functions such as `openFileDialog`, `add
 This example demonstrates various upload settings and the ability to rename files.
 
 [Example Codesandbox](https://codesandbox.io/s/react-file-manager-advanced-uploading-ceq8tl)
+
+## Avatar
+
+This example demonstrates how you can transform the file manager into an avatar uploader.
+
+[Example Codesandbox](https://codesandbox.io/s/react-file-manager-avatar-w93g73)

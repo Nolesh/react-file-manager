@@ -11,6 +11,10 @@ A simple HTML5 file manager with a drag and drop zone used to cover the most com
 
 ![react file manager demo](https://raw.githubusercontent.com/nolesh/react-file-manager/master/public/ReactFileManager.gif)
 
+**Click [here](https://github.com/nolesh/react-file-manager/tree/master/examples) to access the full list of live examples hosted on CodeSandbox.**
+
+---
+
 ## Key Features
 
 - No dependent packages (includes all necessary components like button, menu, etc.).
